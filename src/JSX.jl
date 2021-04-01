@@ -45,8 +45,7 @@ function parse!(root, data, i=firstindex(data), n=lastindex(data))
             haschildren = true
 		end
 
-		# TODO: avoid Any in all cases possible!
-		attributes = Pair{Any,String}[]  # TODO: get the right type from root and avoid Union and Any
+		attributes = Pair{String,String}[]
 		k = findfirst(isspace, name)
 		if !isnothing(k)
 			# prevind/nextind are needed to support Unicode
@@ -61,11 +60,24 @@ function parse!(root, data, i=firstindex(data), n=lastindex(data))
 					if rest[r] == '"'
 						r = nextind(rest, r)
 						s = findnext('"', rest, r)
+
 						value = rest[r:prevind(rest, s)]
-						r = s = nextind(rest, s)
 						push!(attributes, key => value)
+						r = s = nextind(rest, s)
+					else
+						# No quotation mark
+						s = findnext(isspace, rest, r)
+						if isnothing(s)
+							# Last attribute
+							value = rest[r:m]
+							push!(attributes, key => value)
+							break
+						end
+
+						value = rest[r:prevind(rest, s)]
+						push!(attributes, key => value)
+						r = s = nextind(rest, s)
 					end
-					# TODO: support lack of '"'
 				elseif isspace(rest[r])
 					if r < m
 						r = s = nextind(rest, r)
@@ -85,7 +97,6 @@ function parse!(root, data, i=firstindex(data), n=lastindex(data))
 		if haschildren
 			child, i = parse!(child, data, i, n)
 		end
-
 		push!(root.children, child)
 	else
 		j = findnext('<', data, i)
@@ -99,7 +110,7 @@ function parse!(root, data, i=firstindex(data), n=lastindex(data))
 
 		# TODO: should we parse HTML comments?
 		text = replace(text, r"\s+" => ' ')
-		if !isempty(text) && findfirst(!isspace, text) !== nothing
+		if !isempty(text) && !isnothing(findfirst(!isspace, text))
 			# Neither empty nor only whitespace
 			push!(root.children, text)
 		end
@@ -143,14 +154,12 @@ function htmexpr(s)
     esc(toexpr(htm))
 end
 
+toexpr(node::Node) = Expr(:call, Node, toexpr(node.name), toexpr(node.attributes), toexpr(node.children))
 # https://stackoverflow.com/a/39499403/4039050
 # Should we use escape_string(str) instead of str?
 toexpr(str::AbstractString) = Meta.parse("\"$(str)\"")  # Good, but let's be more clever!
-toexpr(children::AbstractVector) = Expr(:vect, toexpr.(children)...)
-
+toexpr(vec::AbstractVector) = Expr(:vect, toexpr.(vec)...)
 toexpr(pair::Pair) = Expr(:call, :(=>), toexpr(first(pair)), toexpr(last(pair)))
-toexpr(node::Node) = Expr(:call, Node, toexpr(node.name), toexpr(node.attributes), toexpr(node.children))
-
 toexpr(x) = x  # fallback
 
 end
