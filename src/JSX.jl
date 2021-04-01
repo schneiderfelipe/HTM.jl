@@ -11,12 +11,12 @@ export @htm_str
 A node in the tree.
 """
 struct Node
-    name::Symbol
-    attributes::NamedTuple
+    name
+    attributes::Vector
     children::Vector
 end
-Node(name, attributes) = Node(Symbol(name), attributes, [])
-Node(name) = Node(name, NamedTuple())
+Node(name, attributes) = Node(name, attributes, [])
+Node(name) = Node(name, [])
 
 Base.:(==)(a::Node, b::Node) = a.name == b.name && a.attributes == b.attributes && a.children == b.children
 
@@ -45,17 +45,16 @@ function parse!(root, data, i=1, n=length(data))
             hascontent = true
 		end
 
-		attributes = Tuple{Symbol,String}[]
+		attributes = Pair{Any,String}[]  # TODO: get the right type from root and avoid Union and Any
 		k = findfirst(' ', name)
 		if !isnothing(k)
 			name, rest = name[1:k-1], name[k+1:end]
 
 			for pair in split(rest)
 				key, value = split(pair, "=")
-				push!(attributes, (Symbol(key), strip(value, '"')))
+				push!(attributes, key => strip(value, '"'))
 			end
 		end
-		attributes = (; attributes...)
 
 		child = Node(name, attributes)
 		if hascontent
@@ -119,11 +118,21 @@ function htmexpr(s)
 end
 
 # https://stackoverflow.com/a/39499403/4039050
-toexpr(str::String) = Meta.parse("\"$(escape_string(str))\"")  # Good, but let's be more clever!
+# Should we use escape_string(str) instead of str?
+toexpr(str::AbstractString) = Meta.parse("\"$(str)\"")  # Good, but let's be more clever!
 
-toexpr(attributes::NamedTuple) = attributes
+# Both probably won't be used anymore, but we'll see.
+toexpr(sym::Symbol) = Meta.quot(sym)
+function toexpr(attributes::NamedTuple)
+	if isempty(attributes)
+		return Expr(:call, :NamedTuple)
+	end
+	return Expr(:tuple, [Expr(:(=), toexpr(key), toexpr(value)) for (key, value) in pairs(attributes)]...)
+end
 
+toexpr(pair::Pair) = Expr(:call, :(=>), toexpr(first(pair)), toexpr(last(pair)))
 toexpr(children::Vector) = Expr(:vect, toexpr.(children)...)
-toexpr(node::Node) = Expr(:call, Node, Meta.quot(node.name), toexpr(node.attributes), toexpr(node.children))
+toexpr(node::Node) = Expr(:call, Node, toexpr(node.name), toexpr(node.attributes), toexpr(node.children))
+toexpr(x) = x
 
 end

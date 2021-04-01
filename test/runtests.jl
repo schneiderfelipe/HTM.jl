@@ -7,13 +7,13 @@ using JSX: Node
     # Who doesn't love hand-made, artisanal tests?
 
     # Some simple tests for single tags in different forms.
-    @test htm"<hr />" == Node(:hr, NamedTuple(), [])
-    @test htm"<meta charset=\"UTF-8\" />" == Node(:meta, (charset="UTF-8",), [])
-    @test htm"<a></a>" == Node(:a, NamedTuple(), [])
-    @test htm"<title>JSX</title>" == Node(:title, NamedTuple(), ["JSX"])
-    @test htm"<html lang=\"pt-BR\"></html>" == Node(:html, (lang="pt-BR",), [])
-    @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == Node(:a, (href="kitty.jpg",), ["A kitty!"])
-    @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == Node(:noscript, NamedTuple(), [Node(:strong, NamedTuple(), ["Sorry, no JavaScript!"])])
+    @test htm"<hr />" == Node("hr", [], [])
+    @test htm"<meta charset=\"UTF-8\" />" == Node("meta", ["charset" => "UTF-8"], [])
+    @test htm"<a></a>" == Node("a", [], [])
+    @test htm"<title>JSX</title>" == Node("title", [], ["JSX"])
+    @test htm"<html lang=\"pt-BR\"></html>" == Node("html", ["lang" => "pt-BR"], [])
+    @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == Node("a", ["href" => "kitty.jpg"], ["A kitty!"])
+    @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == Node("noscript", [], [Node("strong", [], ["Sorry, no JavaScript!"])])
 
     # A wild lonely tag has appeared!
     @test htm"""
@@ -22,14 +22,14 @@ using JSX: Node
             <p>A <strong>bold</strong> paragraph!</p>
             <img src="kitty.jpg" />
         </section>
-    """ == Node(:section, NamedTuple(), [
-        Node(:h1, NamedTuple(), ["Awesome title"]),
-        Node(:p, NamedTuple(), [
+    """ == Node("section", [], [
+        Node("h1", [], ["Awesome title"]),
+        Node("p", [], [
             "A ",
-            Node(:strong, NamedTuple(), ["bold"]),
+            Node("strong", [], ["bold"]),
             " paragraph!",
         ]),
-        Node(:img, (src="kitty.jpg",), []),
+        Node("img", ["src" => "kitty.jpg"], []),
     ])
 
     # A wild attribute has appeared!
@@ -37,19 +37,30 @@ using JSX: Node
         <person name="John" surname="Doe">
             A <em>nice</em> guy
         </person>
-    """ == Node(:person, (name="John", surname="Doe"), [
+    """ == Node("person", ["name" => "John", "surname" => "Doe"], [
         " A ",
-        Node(:em, NamedTuple(), ["nice"]),
+        Node("em", [], ["nice"]),
         " guy ",
     ])
 
-    # TODO: make this more clever! htm"<country name=\"Brazil\", continent=\"South America\">" should call this function!
-    # TODO: test string interpolation in attribute
-    country(name, continent) = htm"""
-        <country>
-            <name>$name</name>
-            <continent>$continent</continent>
-        </country>
-    """
-    @test country("Brazil", "South America") == Node(:country, NamedTuple(), [Node(:name, NamedTuple(), ["Brazil"]), Node(:continent, NamedTuple(), ["South America"])])
+    let name = "Brazil", continent = "South America"
+        # TODO: make this more clever! htm"<country name=\"Brazil\", continent=\"South America\">" should call this function!
+        @test htm"""
+            <country>
+                <name>$name</name>
+                <continent>$continent</continent>
+            </country>
+        """ == Node("country", [], [Node("name", [], ["Brazil"]), Node("continent", [], ["South America"])])
+
+        @test htm"""
+            <country name="$name" continent="$continent" />
+        """ == Node("country", ["name" => "Brazil", "continent" => "South America"], [])
+    end
+
+    let tag = "a", attr = "href", url = "https://julialang.org/", text = "The Julia Programming Language"
+        # Great Scott!
+        @test htm"<$tag $attr=\"$url\">$text</$tag>" == Node(tag, [attr => url], [text])
+    end
+
+    # TODO: test unicode in tags, attributes, content, etc.: we need to check if escape_string is necessary
 end
