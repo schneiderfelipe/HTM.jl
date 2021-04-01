@@ -113,10 +113,17 @@ macro htm_str(s)
     htmexpr(s)
 end
 
-function htmexpr(str)
-	# https://stackoverflow.com/a/39499403/4039050
-	data = esc(Meta.parse("\"$(escape_string(str))\""))
-	:(parse($data))
+function htmexpr(s)
+    htm = parse(s)
+    esc(toexpr(htm))
 end
+
+# https://stackoverflow.com/a/39499403/4039050
+toexpr(str::String) = Meta.parse("\"$(escape_string(str))\"")  # Good, but let's be more clever!
+
+toexpr(attributes::NamedTuple) = attributes
+
+toexpr(children::Vector) = Expr(:vect, toexpr.(children)...)
+toexpr(node::Node) = Expr(:call, Node, Meta.quot(node.name), toexpr(node.attributes), toexpr(node.children))
 
 end

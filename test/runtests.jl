@@ -44,6 +44,7 @@ using JSX: Node
     ])
 
     # TODO: make this more clever! htm"<country name=\"Brazil\", continent=\"South America\">" should call this function!
+    # TODO: test string interpolation in attribute
     country(name, continent) = htm"""
         <country>
             <name>$name</name>
