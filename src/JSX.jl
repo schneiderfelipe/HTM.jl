@@ -109,7 +109,11 @@ julia> htm"<h1>Hello world!</h1>"
 # conserve them until the very end. Then, the macro returns not a finished
 # tree, but an expression that constructs one. The tree should allow arbitrary
 # objects in this case.
-macro htm_str(str)
+macro htm_str(s)
+    htmexpr(s)
+end
+
+function htmexpr(str)
 	# https://stackoverflow.com/a/39499403/4039050
 	data = esc(Meta.parse("\"$(escape_string(str))\""))
 	:(parse($data))
