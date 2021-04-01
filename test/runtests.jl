@@ -7,13 +7,13 @@ using JSX: Node
     # Who doesn't love hand-made, artisanal tests?
 
     # Some simple tests for single tags in different forms.
-    @test htm"<hr />" == Node(:hr, Dict(), [])
-    @test htm"<meta charset=\"UTF-8\" />" == Node(:meta, Dict(:charset => "UTF-8"), [])
-    @test htm"<a></a>" == Node(:a, Dict(), [])
-    @test htm"<title>JSX</title>" == Node(:title, Dict(), ["JSX"])
-    @test htm"<html lang=\"pt-BR\"></html>" == Node(:html, Dict(:lang => "pt-BR"), [])
-    @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == Node(:a, Dict(:href => "kitty.jpg"), ["A kitty!"])
-    @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == Node(:noscript, Dict(), [Node(:strong, Dict(), ["Sorry, no JavaScript!"])])
+    @test htm"<hr />" == Node(:hr, NamedTuple(), [])
+    @test htm"<meta charset=\"UTF-8\" />" == Node(:meta, (charset="UTF-8",), [])
+    @test htm"<a></a>" == Node(:a, NamedTuple(), [])
+    @test htm"<title>JSX</title>" == Node(:title, NamedTuple(), ["JSX"])
+    @test htm"<html lang=\"pt-BR\"></html>" == Node(:html, (lang="pt-BR",), [])
+    @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == Node(:a, (href="kitty.jpg",), ["A kitty!"])
+    @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == Node(:noscript, NamedTuple(), [Node(:strong, NamedTuple(), ["Sorry, no JavaScript!"])])
 
     # A wild lonely tag has appeared!
     @test htm"""
@@ -22,14 +22,14 @@ using JSX: Node
             <p>A <strong>bold</strong> paragraph!</p>
             <img src="kitty.jpg" />
         </section>
-    """ == Node(:section, Dict(), [
-        Node(:h1, Dict(), ["Awesome title"]),
-        Node(:p, Dict(), [
+    """ == Node(:section, NamedTuple(), [
+        Node(:h1, NamedTuple(), ["Awesome title"]),
+        Node(:p, NamedTuple(), [
             "A ",
-            Node(:strong, Dict(), ["bold"]),
+            Node(:strong, NamedTuple(), ["bold"]),
             " paragraph!",
         ]),
-        Node(:img, Dict(:src => "kitty.jpg"), []),
+        Node(:img, (src="kitty.jpg",), []),
     ])
 
     # A wild attribute has appeared!
@@ -37,9 +37,9 @@ using JSX: Node
         <person name="John" surname="Doe">
             A <em>nice</em> guy
         </person>
-    """ == Node(:person, Dict(:name => "John", :surname => "Doe"), [
+    """ == Node(:person, (name="John", surname="Doe"), [
         " A ",
-        Node(:em, Dict(), ["nice"]),
+        Node(:em, NamedTuple(), ["nice"]),
         " guy ",
     ])
 
@@ -50,5 +50,5 @@ using JSX: Node
             <continent>$continent</continent>
         </country>
     """
-    @test country("Brazil", "South America") == Node(:country, Dict(), [Node(:name, Dict(), ["Brazil"]), Node(:continent, Dict(), ["South America"])])
+    @test country("Brazil", "South America") == Node(:country, NamedTuple(), [Node(:name, NamedTuple(), ["Brazil"]), Node(:continent, NamedTuple(), ["South America"])])
 end

@@ -12,11 +12,11 @@ A node in the tree.
 """
 struct Node
     name::Symbol
-    attributes::Dict{Symbol,String}  # TODO: better: named tuple! Is typed, conserves order & etc.!
-    children::Vector{Union{Node,String}}
+    attributes::NamedTuple
+    children::Vector
 end
 Node(name, attributes) = Node(Symbol(name), attributes, [])
-Node(name) = Node(name, Dict())
+Node(name) = Node(name, NamedTuple())
 
 Base.:(==)(a::Node, b::Node) = a.name == b.name && a.attributes == b.attributes && a.children == b.children
 
@@ -45,16 +45,17 @@ function parse!(root, data, i=1, n=length(data))
             hascontent = true
 		end
 
-		attributes = Dict{Symbol,String}()
+		attributes = Tuple{Symbol,String}[]
 		k = findfirst(' ', name)
 		if !isnothing(k)
 			name, rest = name[1:k-1], name[k+1:end]
 
 			for pair in split(rest)
 				key, value = split(pair, "=")
-				push!(attributes, Symbol(key) => strip(value, '"'))
+				push!(attributes, (Symbol(key), strip(value, '"')))
 			end
 		end
+		attributes = (; attributes...)
 
 		child = Node(name, attributes)
 		if hascontent
