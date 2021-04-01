@@ -23,36 +23,61 @@ Base.:(==)(a::Node, b::Node) = a.name == b.name && a.attributes == b.attributes 
 """
 Parse a tree by modifying the root node.
 """
-function parse!(root, data, i=1, n=length(data))
-	if i > n || n <= 0  # Is this necessary?
+function parse!(root, data, i=firstindex(data), n=lastindex(data))
+	if i > n
 		return root, i
 	end
 
 	endtag = "</$(root.name)>"
 	if startswith(data[i:n], endtag)
-		return root, i + length(endtag)
+		return root, nextind(data, i, length(endtag))
 	elseif data[i] == '<'
-		i += 1
-		j = findnext('>', data, i) - 1
+		i = nextind(data, i)
+		j = prevind(data, findnext('>', data, i))
 		name = data[i:j]
-		i = j + 2
+		i = nextind(data, j, 2)
 
 		if name[end] == '/'
 			# TODO: some standard tags have no '/' but have no children by default. Test that?
-			name = rstrip(name[1:end-1])
+			name = rstrip(name[1:prevind(name, end)])
             haschildren = false
         else
             haschildren = true
 		end
 
+		# TODO: avoid Any in all cases possible!
 		attributes = Pair{Any,String}[]  # TODO: get the right type from root and avoid Union and Any
-		k = findfirst(' ', name)
+		k = findfirst(isspace, name)
 		if !isnothing(k)
-			name, rest = name[1:k-1], name[k+1:end]
+			# prevind/nextind are needed to support Unicode
+			name, rest = name[1:prevind(name, k)], name[nextind(name, k):end]
 
-			for pair in split(rest)
-				key, value = split(pair, "=")
-				push!(attributes, key => strip(value, '"'))
+			r, s, m = 1, 1, lastindex(rest)
+			while s < m
+				@assert r <= s
+				if rest[s] == '='
+					key = rest[r:prevind(rest, s)]
+					r = s = nextind(rest, s)
+					if rest[r] == '"'
+						r = nextind(rest, r)
+						s = findnext('"', rest, r)
+						value = rest[r:prevind(rest, s)]
+						r = s = nextind(rest, s)
+						push!(attributes, key => value)
+					end
+					# TODO: support lack of '"'
+				elseif isspace(rest[r])
+					if r < m
+						r = s = nextind(rest, r)
+					else
+						break
+					end
+				end
+				if s < m
+					s = nextind(rest, s)
+				else
+					break
+				end
 			end
 		end
 
@@ -65,16 +90,17 @@ function parse!(root, data, i=1, n=length(data))
 	else
 		j = findnext('<', data, i)
 		if !isnothing(j)
-			j -=  1
+			j = prevind(data, j)
 		else
 			j = n
 		end
 		text = data[i:j]
-		i += length(text)
+		i = nextind(data, i, length(text))
 
 		# TODO: should we parse HTML comments?
-		text = replace(text, r"\s+" => " ")
-		if !isempty(text) && text != " "
+		text = replace(text, r"\s+" => ' ')
+		if !isempty(text) && findfirst(!isspace, text) !== nothing
+			# Neither empty nor only whitespace
 			push!(root.children, text)
 		end
 	end
