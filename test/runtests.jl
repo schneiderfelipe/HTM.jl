@@ -43,6 +43,9 @@ using JSX: Node
         " guy ",
     ])
 
+    # A wild root node has appeared!
+    @test htm"<first /><second />" == Node("", [], [Node("first", [], []), Node("second", [], [])])
+
     let name = "Brazil", continent = "South America"
         # TODO: make this more clever! htm"<country name=\"Brazil\", continent=\"South America\">" should call this function!
         @test htm"""
@@ -62,5 +65,5 @@ using JSX: Node
         @test htm"<$tag $attr=\"$url\">$text</$tag>" == Node(tag, [attr => url], [text])
     end
 
-    # TODO: test unicode in tags, attributes, content, etc.: we need to check if escape_string is necessary
+    # TODO: test unicode in tags, attributes, children, etc.: we need to check if escape_string is necessary
 end

@@ -11,9 +11,9 @@ export @htm_str
 A node in the tree.
 """
 struct Node
-    name
-    attributes::Vector
-    children::Vector
+    name::String
+    attributes::Vector{Pair{String,String}}
+    children::Vector{Union{Node,String}}  # too restrictive in the long run
 end
 Node(name, attributes) = Node(name, attributes, [])
 Node(name) = Node(name, [])
@@ -38,11 +38,11 @@ function parse!(root, data, i=1, n=length(data))
 		i = j + 2
 
 		if name[end] == '/'
-			# TODO: some standard tags have no '/' but have no content by default. Test that?
+			# TODO: some standard tags have no '/' but have no children by default. Test that?
 			name = rstrip(name[1:end-1])
-            hascontent = false
+            haschildren = false
         else
-            hascontent = true
+            haschildren = true
 		end
 
 		attributes = Pair{Any,String}[]  # TODO: get the right type from root and avoid Union and Any
@@ -57,7 +57,7 @@ function parse!(root, data, i=1, n=length(data))
 		end
 
 		child = Node(name, attributes)
-		if hascontent
+		if haschildren
 			child, i = parse!(child, data, i, n)
 		end
 
@@ -86,7 +86,7 @@ end
 Parse a tree.
 """
 function parse(data)
-	root = parse!(Node(:root), data)[1]
+	root = parse!(Node(""), data)[1]  # the root node has an empty name
 	if length(root.children) == 1
 		return root.children[1]
 	end
@@ -120,19 +120,11 @@ end
 # https://stackoverflow.com/a/39499403/4039050
 # Should we use escape_string(str) instead of str?
 toexpr(str::AbstractString) = Meta.parse("\"$(str)\"")  # Good, but let's be more clever!
-
-# Both probably won't be used anymore, but we'll see.
-toexpr(sym::Symbol) = Meta.quot(sym)
-function toexpr(attributes::NamedTuple)
-	if isempty(attributes)
-		return Expr(:call, :NamedTuple)
-	end
-	return Expr(:tuple, [Expr(:(=), toexpr(key), toexpr(value)) for (key, value) in pairs(attributes)]...)
-end
+toexpr(children::AbstractVector) = Expr(:vect, toexpr.(children)...)
 
 toexpr(pair::Pair) = Expr(:call, :(=>), toexpr(first(pair)), toexpr(last(pair)))
-toexpr(children::Vector) = Expr(:vect, toexpr.(children)...)
 toexpr(node::Node) = Expr(:call, Node, toexpr(node.name), toexpr(node.attributes), toexpr(node.children))
-toexpr(x) = x
+
+toexpr(x) = x  # fallback
 
 end
