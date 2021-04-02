@@ -125,18 +125,16 @@ toexpr(str::AbstractString) = Meta.parse("\"$(str)\"")  # Allow string interpola
 toexpr(pair::Pair) = Expr(:call, :(=>), Expr(:call, Symbol, toexpr(first(pair))), toexpr(last(pair)))
 toexpr(x) = x  # fallback
 
+# Append if vector, push otherwise
+push_or_append!(arr, ret) = push!(arr, ret)  # fallback
+push_or_append!(arr, ret::AbstractVector) = append!(arr, ret)
+
 toexprwithcode(node::Node) = Expr(:call, Node, Expr(:call, Symbol, toexpr(node.name)), toexpr(node.attributes), toexprwithcode(node.children))
 function toexprwithcode(vec::AbstractVector)
 	arr = []  # TODO: choose correct type
 	for v in vec
 		ret = toexprwithcode(v)
-		if ret isa AbstractVector  # TODO: create a function barrier
-			for r in ret
-				push!(arr, r)
-			end
-		else
-			push!(arr, ret)
-		end
+		push_or_append!(arr, ret)
 	end
 	return Expr(:vect, arr...)
 end

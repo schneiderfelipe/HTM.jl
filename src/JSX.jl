@@ -9,5 +9,6 @@ export @htm_str
 
 include("node.jl")
 include("parse.jl")
+include("rich.jl")
 
 end

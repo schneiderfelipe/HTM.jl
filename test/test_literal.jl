@@ -8,6 +8,9 @@
     @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == Node(:a, [:href => "kitty.jpg"], ["A kitty!"])
     @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == Node(:noscript, [], [Node(:strong, [], ["Sorry, no JavaScript!"])])
 
+    # TODO: the following is a problem, we want the same type every time!
+    @test htm"Ceci nest pas une string" == "Ceci nest pas une string"
+
     # A wild lonely tag has appeared!
     @test htm"""
         <section>
