@@ -1,6 +1,5 @@
 @testset "String interpolation" begin
     let name = "Brazil", continent = "South America"
-        # TODO: make this more clever! htm"<country name=\"Brazil\", continent=\"South America\">" should call this function!
         @test htm"""
             <country>
                 <name>$name</name>

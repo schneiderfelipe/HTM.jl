@@ -10,4 +10,12 @@
         Node(:em, [], ["nice"]),
         " guy ",
     ])
+
+    let lang = "pt-BR"
+        @test htm"<html lang=$lang></html>" == Node(:html, [:lang => lang], [])
+    end
+
+    let alt = "I have a lot of whitespace"
+        @test htm"<img alt=$alt />" == Node(:img, [:alt => alt], [])
+    end
 end

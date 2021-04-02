@@ -8,8 +8,8 @@
     @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == Node(:a, [:href => "kitty.jpg"], ["A kitty!"])
     @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == Node(:noscript, [], [Node(:strong, [], ["Sorry, no JavaScript!"])])
 
-    # TODO: the following is a problem, we want the same type every time!
-    @test htm"Ceci nest pas une string" == "Ceci nest pas une string"
+    # Observe that the returned value is always a Node
+    @test htm"Ceci nest pas une string" == Node(:root, [], ["Ceci nest pas une string"])
 
     # A wild lonely tag has appeared!
     @test htm"""
@@ -41,4 +41,12 @@
 
     # A wild root node has appeared!
     @test htm"<first /><second />" == Node(:root, [], [Node(:first, [], []), Node(:second, [], [])])
+
+    # A wild comment has appeared!
+    @test htm"""
+        <div>
+            <!-- I am a comment! -->
+            I am not.
+        </div>
+    """ == Node(:div, [], [Node(:comment, [], [" I am a comment! "]), " I am not. "])
 end

@@ -12,7 +12,8 @@ Node(name) = Node(name, [])
 
 Base.:(==)(a::Node, b::Node) = a.name == b.name && a.attributes == b.attributes && a.children == b.children
 
-isroot(node::Node) = node.name == :root
+iscomment(node::Node) = Symbol(node.name) == :comment
+isroot(node::Node) = Symbol(node.name) == :root
 
 Base.show(io::IO, ::MIME"text/html", node::Node) = html(io, node)  # Rich output
 Base.show(io::IO, mime::MIME"text/plain", node::Node) = html(io, node, mime)
