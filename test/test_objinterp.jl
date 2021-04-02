@@ -26,4 +26,12 @@
             </section>
         """ == Node("section", [], [Node("h1", [], [md"My awesome title!"]), markdown, markdown])
     end
+
+    # Wild containers have appeared!
+    @test htm"""<span>
+        $(1 + 2 + 3),
+        $([1, 2, 3]),
+        $((1, 2, 3)),
+        $(Dict(1 => 2, 2 => 3))
+    </span>""" == Node("span", [], [6, ", ", [1, 2, 3], ", ", (1, 2, 3), ", ", Dict(2 => 3,1 => 2)])
 end

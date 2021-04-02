@@ -13,4 +13,5 @@ using Markdown
     include("test_unicode.jl")
     include("test_strinterp.jl")
     include("test_objinterp.jl")
+    include("test_showhtml.jl")
 end

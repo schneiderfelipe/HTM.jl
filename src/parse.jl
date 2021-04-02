@@ -3,10 +3,7 @@ Parse a tree.
 """
 function parse(data)
 	root = parse!(Node(""), data)[1]
-	if length(root.children) == 1  # the root node has an empty name
-		# We return a single object if possible
-		return root.children[1]
-	end
+	length(root.children) == 1 && return root.children[1]
 	return root
 end
 
@@ -14,9 +11,7 @@ end
 Parse a tree by modifying the root node.
 """
 function parse!(root, data, i=firstindex(data), n=lastindex(data))
-	if i > n
-		return root, i
-	end
+	i > n && return root, i
 
 	endtag = "</$(root.name)>"
 	if startswith(data[i:n], endtag)
@@ -101,10 +96,9 @@ function parse!(root, data, i=firstindex(data), n=lastindex(data))
 
 		# TODO: should we parse HTML comments?
 		text = replace(text, r"\s+" => ' ')
-		if !isempty(text) && !isnothing(findfirst(!isspace, text))
-			# Neither empty nor only whitespace
-			push!(root.children, text)
-		end
+
+		# Ignore empty children
+		!isempty(text) && !isnothing(findfirst(!isspace, text)) && push!(root.children, text)
 	end
 
 	return parse!(root, data, i, n)
@@ -167,22 +161,16 @@ function toexprwithcode!(exprs::AbstractVector, str::AbstractString, i=firstinde
 		candidate = str[i:prevind(str, j)]
 	end
 
-	if !isempty(candidate) && !isnothing(findfirst(!isspace, candidate))
-		# Neither empty nor only whitespace
-		push!(exprs, replace(candidate, "\\\$" => "\$"))  # Hack to support "\$"
-	end
+	# Ignore empty children
+	# Plus a hack to support "\$"
+	!isempty(candidate) && !isnothing(findfirst(!isspace, candidate)) && push!(exprs, replace(candidate, "\\\$" => "\$"))
 
 	if isnothing(j)
-		if length(exprs) == 1
-			# We return a single object if possible
-			return exprs[1]
-		end
+		length(exprs) == 1 && return exprs[1]
 		return exprs
 	end
 
 	expr, i = Meta.parse(str, k, greedy=false)
-	if !isnothing(expr)
-		push!(exprs, expr)
-	end
+	!isnothing(expr) && push!(exprs, expr)
 	return toexprwithcode!(exprs, str, i, n)
 end
