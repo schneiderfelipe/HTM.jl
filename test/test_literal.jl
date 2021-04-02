@@ -7,33 +7,35 @@
 @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == Node("a", ["href" => "kitty.jpg"], ["A kitty!"])
 @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == Node("noscript", [], [Node("strong", [], ["Sorry, no JavaScript!"])])
 
-# A wild lonely tag has appeared!
-@test htm"""
-    <section>
-        <h1>Awesome title</h1>
-        <p>A <strong>bold</strong> paragraph!</p>
-        <img src="kitty.jpg" />
-    </section>
-""" == Node("section", [], [
-    Node("h1", [], ["Awesome title"]),
-    Node("p", [], [
-        "A ",
-        Node("strong", [], ["bold"]),
-        " paragraph!",
-    ]),
-    Node("img", ["src" => "kitty.jpg"], []),
-])
+@testset "Literals" begin
+    # A wild lonely tag has appeared!
+    @test htm"""
+        <section>
+            <h1>Awesome title</h1>
+            <p>A <strong>bold</strong> paragraph!</p>
+            <img src="kitty.jpg" />
+        </section>
+    """ == Node("section", [], [
+        Node("h1", [], ["Awesome title"]),
+        Node("p", [], [
+            "A ",
+            Node("strong", [], ["bold"]),
+            " paragraph!",
+        ]),
+        Node("img", ["src" => "kitty.jpg"], []),
+    ])
 
-# A wild attribute has appeared!
-@test htm"""
-    <person name="John" surname="Doe">
-        A <em>nice</em> guy
-    </person>
-""" == Node("person", ["name" => "John", "surname" => "Doe"], [
-    " A ",
-    Node("em", [], ["nice"]),
-    " guy ",
-])
+    # A wild attribute has appeared!
+    @test htm"""
+        <person name="John" surname="Doe">
+            A <em>nice</em> guy
+        </person>
+    """ == Node("person", ["name" => "John", "surname" => "Doe"], [
+        " A ",
+        Node("em", [], ["nice"]),
+        " guy ",
+    ])
 
-# A wild root node has appeared!
-@test htm"<first /><second />" == Node("", [], [Node("first", [], []), Node("second", [], [])])
+    # A wild root node has appeared!
+    @test htm"<first /><second />" == Node("", [], [Node("first", [], []), Node("second", [], [])])
+end
