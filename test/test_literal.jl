@@ -1,12 +1,12 @@
 @testset "Literals" begin
     # Some simple tests for single tags in different forms.
-    @test htm"<hr />" == Node("hr", [], [])
-    @test htm"<meta charset=\"UTF-8\" />" == Node("meta", ["charset" => "UTF-8"], [])
-    @test htm"<a></a>" == Node("a", [], [])
-    @test htm"<title>JSX</title>" == Node("title", [], ["JSX"])
-    @test htm"<html lang=\"pt-BR\"></html>" == Node("html", ["lang" => "pt-BR"], [])
-    @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == Node("a", ["href" => "kitty.jpg"], ["A kitty!"])
-    @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == Node("noscript", [], [Node("strong", [], ["Sorry, no JavaScript!"])])
+    @test htm"<hr />" == Node(:hr, [], [])
+    @test htm"<meta charset=\"UTF-8\" />" == Node(:meta, [:charset => "UTF-8"], [])
+    @test htm"<a></a>" == Node(:a, [], [])
+    @test htm"<title>JSX</title>" == Node(:title, [], ["JSX"])
+    @test htm"<html lang=\"pt-BR\"></html>" == Node(:html, [:lang => "pt-BR"], [])
+    @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == Node(:a, [:href => "kitty.jpg"], ["A kitty!"])
+    @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == Node(:noscript, [], [Node(:strong, [], ["Sorry, no JavaScript!"])])
 
     # A wild lonely tag has appeared!
     @test htm"""
@@ -15,14 +15,14 @@
             <p>A <strong>bold</strong> paragraph!</p>
             <img src="kitty.jpg" />
         </section>
-    """ == Node("section", [], [
-        Node("h1", [], ["Awesome title"]),
-        Node("p", [], [
+    """ == Node(:section, [], [
+        Node(:h1, [], ["Awesome title"]),
+        Node(:p, [], [
             "A ",
-            Node("strong", [], ["bold"]),
+            Node(:strong, [], ["bold"]),
             " paragraph!",
         ]),
-        Node("img", ["src" => "kitty.jpg"], []),
+        Node(:img, [:src => "kitty.jpg"], []),
     ])
 
     # A wild attribute has appeared!
@@ -30,12 +30,12 @@
         <person name="John" surname="Doe">
             A <em>nice</em> guy
         </person>
-    """ == Node("person", ["name" => "John", "surname" => "Doe"], [
+    """ == Node(:person, [:name => "John", :surname => "Doe"], [
         " A ",
-        Node("em", [], ["nice"]),
+        Node(:em, [], ["nice"]),
         " guy ",
     ])
 
     # A wild root node has appeared!
-    @test htm"<first /><second />" == Node("", [], [Node("first", [], []), Node("second", [], [])])
+    @test htm"<first /><second />" == Node(:root, [], [Node(:first, [], []), Node(:second, [], [])])
 end

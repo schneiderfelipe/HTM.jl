@@ -1,8 +1,9 @@
 """
 Parse a tree.
 """
-function parse(data)
-	root = parse!(Node(""), data)[1]
+function parse(data, rootname="root")
+	# root name must be a string if we want to properly generate the tree later with symbols
+	root = parse!(Node(rootname), data)[1]
 	length(root.children) == 1 && return root.children[1]
 	return root
 end
@@ -121,15 +122,15 @@ htmexpr(s) = esc(toexprwithcode(parse(s)))
 
 toexpr(vec::AbstractVector) = Expr(:vect, toexpr.(vec)...)
 toexpr(str::AbstractString) = Meta.parse("\"$(str)\"")  # Allow string interpolation
-toexpr(pair::Pair) = Expr(:call, :(=>), toexpr(first(pair)), toexpr(last(pair)))
+toexpr(pair::Pair) = Expr(:call, :(=>), Expr(:call, Symbol, toexpr(first(pair))), toexpr(last(pair)))
 toexpr(x) = x  # fallback
 
-toexprwithcode(node::Node) = Expr(:call, Node, toexpr(node.name), toexpr(node.attributes), toexprwithcode(node.children))
+toexprwithcode(node::Node) = Expr(:call, Node, Expr(:call, Symbol, toexpr(node.name)), toexpr(node.attributes), toexprwithcode(node.children))
 function toexprwithcode(vec::AbstractVector)
 	arr = []  # TODO: choose correct type
 	for v in vec
 		ret = toexprwithcode(v)
-		if ret isa AbstractVector  # TODO: this could become a function barrier
+		if ret isa AbstractVector  # TODO: create a function barrier
 			for r in ret
 				push!(arr, r)
 			end
