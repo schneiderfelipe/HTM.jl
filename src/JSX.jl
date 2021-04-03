@@ -7,6 +7,7 @@ module JSX
 
 export @htm_str
 
+include("tags.jl")
 include("node.jl")
 include("parse.jl")
 include("rich.jl")

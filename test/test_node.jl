@@ -1,13 +1,34 @@
 @testset "Node interface" begin
-    root = Node(:root)
-    comment = Node(:comment)
-    div = Node(:div)
+    div = JSX.Node(:div)
+    comment = JSX.Node(:comment)
+    component = JSX.Node(:component)
+    root = JSX.Node(:dummy)
 
     # Sanity checks
-    @test iscomment(root) === false
-    @test iscomment(comment) === true
-    @test iscomment(div) === false
-    @test isroot(root) === true
-    @test isroot(comment) === false
-    @test isroot(div) === false
+    @test JSX.children(div) == []
+    @test JSX.children(comment) == []
+    @test JSX.children(component) == []
+    @test JSX.children(root) == []
+
+    @test JSX.iscomment(root) === false
+    @test JSX.iscomment(comment) === true
+    @test JSX.iscomment(component) === false
+    @test JSX.iscomment(div) === false
+
+    @test JSX.iscommon(root) === false
+    @test JSX.iscommon(comment) === false
+    @test JSX.iscommon(component) === false
+    @test JSX.iscommon(div) === true
+
+    @test length(JSX.commontags) == 110
+
+    @test JSX.iscomponent(root) === false
+    @test JSX.iscomponent(comment) === false
+    @test JSX.iscomponent(component) === true
+    @test JSX.iscomponent(div) === false
+
+    @test JSX.isroot(root) === true
+    @test JSX.isroot(comment) === false
+    @test JSX.isroot(component) === false
+    @test JSX.isroot(div) === false
 end

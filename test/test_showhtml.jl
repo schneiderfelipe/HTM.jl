@@ -14,16 +14,16 @@
 
             <h1>Awesome title</h1>
             <p>A <strong>bold</strong> paragraph!</p>
-            <img src="kitty.jpg" />
+            <img src=kitty.jpg />
 
             <hr />
 
-            <person name="John" surname="Doe">
+            <div id=John class=person>
                 A <em>nice</em> guy
-            </person>
+            </div>
         </section>
-        <first /><second />
-    """) == "<section><noscript><strong>Sorry, no JavaScript!</strong></noscript><h1>Awesome title</h1><p>A <strong>bold</strong> paragraph!</p><img src=\"kitty.jpg\" /><hr /><person name=\"John\" surname=\"Doe\"> A <em>nice</em> guy </person></section><first /><second />"
+        <img /><second />
+    """) == "<section><noscript><strong>Sorry, no JavaScript!</strong></noscript><h1>Awesome title</h1><p>A <strong>bold</strong> paragraph!</p><img src=\"kitty.jpg\" /><hr /><div id=\"John\" class=\"person\"> A <em>nice</em> guy </div></section><img /><second />"
 
     @test repr("text/html", htm"<∫ dω=\"dx\" x₀=\"0\" x₁=\"∞\" note=\"hard math\">√(x²)</∫>") == "<∫ dω=\"dx\" x₀=\"0\" x₁=\"∞\" note=\"hard math\">√(x²)</∫>"
 
@@ -52,6 +52,19 @@
         @test repr("text/html", htm"""<span>
             Our value: $val
         </span>""") == "<span> Our value: $val</span>"
+    end
+
+    # A wild comment has appeared!
+    @test repr("text/html", htm"""
+        <div>
+            <!-- I am a comment! -->
+            I am not.
+        </div>
+    """) == "<div><!-- I am a comment! --> I am not. </div>"
+
+    # Components!
+    let f(; name="John", surname="Doe") = htm"<div class=name><h1>$surname,</h1> <h2>$name</h2></div>"
+        @test repr("text/html", htm"<div class=person><f surname=Silva name=João /></div>") == """<div class="person"><div class="name"><h1>Silva,</h1><h2>João</h2></div></div>"""
     end
 
     # TODO: support and test "image/svg+xml" and "image/png", see ideas here: <https://github.com/JuliaLang/julia/blob/master/stdlib/Markdown/src/render/rich.jl>

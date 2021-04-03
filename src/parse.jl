@@ -1,14 +1,8 @@
 """
 Parse a tree.
 """
-function parse(data::AbstractString, rootname::AbstractString="root")::Node
-	# name must be a string to properly generate the tree later with symbols
-	root = parse!(Node(rootname), data)[1]
-
-	# Always return a Node
-	length(root.children) == 1 && root.children[1] isa Node && return root.children[1]
-	return root
-end
+# We need a string for name before the macro has finished running
+parse(data::AbstractString)::Node = first(parse!(Node("dummy"), data))
 
 """
 Parse a tree by modifying the root node.
@@ -26,7 +20,7 @@ function parse!(root::Node, data::AbstractString, i::Int=firstindex(data), n::In
 	elseif data[i] == '<'
 		i = nextind(data, i)
 
-		# TODO: support guessing the type of attributes!
+		# TODO: can we guess the type of attributes?
 		attributes = Pair{String,String}[]
 
 		haschildren = true
@@ -40,8 +34,7 @@ function parse!(root::Node, data::AbstractString, i::Int=firstindex(data), n::In
 			name = data[i:j]
 			i = nextind(data, j, 2)
 
-			if name[end] == '/'
-				# TODO: some standard tags have no '/' but have no children by default. Test that?
+			if last(name) == '/'
 				name = rstrip(name[1:prevind(name, end)])
 				haschildren = false
 			end
@@ -98,7 +91,7 @@ function parse!(root::Node, data::AbstractString, i::Int=firstindex(data), n::In
 		if haschildren
 			child, i = parse!(child, data, i, n)
 		end
-		push!(root.children, child)
+		push!(children(root), child)
 	else
 		if iscomment(root)
 			j = findnext("-->", data, i)
@@ -122,7 +115,7 @@ function parse!(root::Node, data::AbstractString, i::Int=firstindex(data), n::In
 		text = replace(text, r"\s+" => ' ')
 
 		# Ignore empty children
-		!isempty(text) && !isnothing(findfirst(!isspace, text)) && push!(root.children, text)
+		!isempty(text) && !isnothing(findfirst(!isspace, text)) && push!(children(root), text)
 	end
 
 	return parse!(root, data, i, n)
@@ -143,27 +136,59 @@ macro htm_str(s)
 end
 htmexpr(s::AbstractString) = esc(toexprwithcode(parse(s)))
 
-toexpr(vec::AbstractVector) = Expr(:vect, toexpr.(vec)...)
+toexpr(vec::AbstractVector) = :([$(toexpr.(vec)...)])
 toexpr(str::AbstractString) = Meta.parse("\"$(str)\"")  # Allow string interpolation
-toexpr(pair::Pair) = Expr(:call, :(=>), Expr(:call, Symbol, toexpr(first(pair))), toexpr(last(pair)))
+toexpr(pair::Pair) = :(Symbol($(toexpr(first(pair)))) => $(toexpr(last(pair))))
 toexpr(x) = x  # Keep objects in general
+
+function toexprleaf(node::Node)
+	nodeexpr = toexprbranch(node)
+	iscommon(node) && return nodeexpr
+
+	if isempty(node.attributes)
+		callexpr = :(JSX.Node(Symbol("component"), [], [$(Symbol(toexpr(node.name)))()]))
+	else
+		callexpr = :(JSX.Node(Symbol("component"), [], [$(Symbol(toexpr(node.name)))(; $(toexpr(node.attributes))...)]))
+	end
+
+	fallbackexpr = Expr(:if,
+		:(err isa UndefVarError),
+		Expr(:block,  # then
+			nodeexpr,
+		),
+		Expr(:block,  # else
+			:(rethrow()),
+		),
+	)
+
+	return Expr(:try,
+		Expr(:block, callexpr),
+		:err,
+		Expr(:block, fallbackexpr),  # catch
+	)
+end
+toexprbranch(node::Node) = :(JSX.Node(Symbol($(toexpr(node.name))), $(toexpr(node.attributes)), $(toexprwithcode(children(node)))))
 
 # Append if vector, push otherwise
 push_or_append!(arr::AbstractVector, ret::AbstractVector) = append!(arr, ret)
 push_or_append!(arr::AbstractVector, ret) = push!(arr, ret)
 
-# TODO: make this more clever! htm"<country name=\"Brazil\", continent=\"South America\">" should call this function!
-# See how to call the correct function here: <https://discourse.julialang.org/t/convert-string-to-function-name/1547/6?u=schneiderfelipe>
-# Also relevant: <https://stackoverflow.com/questions/34016768/julia-invoke-a-function-by-a-given-string/34023458#34023458>
-# We want to support what JSX does, see here: <https://reactjs.org/docs/hello-world.html> (all "main concepts"!)
-toexprwithcode(node::Node) = Expr(:call, Node, Expr(:call, Symbol, toexpr(node.name)), toexpr(node.attributes), toexprwithcode(node.children))
+function toexprwithcode(node::Node)
+	isempty(node) && return toexprleaf(node)
+	if hassinglenode(node) && isroot(node)
+		singlechild = first(children(node))
+		# TODO: this might change if we wrap strings and objects
+		singlechild isa Node && return toexprwithcode(singlechild)
+	end
+	return toexprbranch(node)
+end
 function toexprwithcode(vec::AbstractVector)
-	arr = []  # TODO: choose correct type
+	arr = []  # TODO: can we choose a better type?
 	for v in vec
 		ret = toexprwithcode(v)
 		push_or_append!(arr, ret)
 	end
-	return Expr(:vect, arr...)
+	return :([$(arr...)])
 end
 toexprwithcode(str::AbstractString) = toexprwithcode!([], str)
 function toexprwithcode!(exprs::AbstractVector, str::AbstractString, i::Int=firstindex(str), n::Int=lastindex(str))  # Return a vector of expressions (some are strings)
@@ -190,7 +215,7 @@ function toexprwithcode!(exprs::AbstractVector, str::AbstractString, i::Int=firs
 	pushexprorstr!(exprs, candidate)
 
 	if isnothing(j)
-		length(exprs) == 1 && return exprs[1]
+		length(exprs) == 1 && return first(exprs)
 		return exprs
 	end
 

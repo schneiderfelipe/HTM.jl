@@ -1,19 +1,26 @@
 @testset "String interpolation" begin
-    let name = "Brazil", continent = "South America"
+    let name = "Brazil", continent = "south-america"
         @test htm"""
-            <country>
-                <name>$name</name>
-                <continent>$continent</continent>
-            </country>
-        """ == Node(:country, [], [Node(:name, [], ["Brazil"]), Node(:continent, [], ["South America"])])
+            <div>
+                <span>$name</span>
+                <span>$continent</span>
+            </div>
+        """ == JSX.Node(:div, [], [JSX.Node(:span, [], ["Brazil"]), JSX.Node(:span, [], ["south-america"])])
 
+        # Using quotation marks
         @test htm"""
-            <country name="$name" continent="$continent" />
-        """ == Node(:country, [:name => "Brazil", :continent => "South America"], [])
+            <div id="$name" class="$continent" />
+        """ == JSX.Node(:div, [:id => "Brazil", :class => "south-america"], [])
     end
 
-    let tag = "a", attr = "href", url = "https://julialang.org/", text = "The Julia Programming Language"
-        # Great Scott!
-        @test htm"<$tag $attr=\"$url\">$text</$tag>" == Node(Symbol(tag), [Symbol(attr) => url], [text])
+    let imgtag = "img", imgattr = "src", imgurl = "https://julialang.org/assets/infra/logo.svg", alt = "The Julia Programming Language"
+        img = htm"<$imgtag $imgattr=$imgurl alt=$alt />"
+        @test img == JSX.Node(Symbol(imgtag), [Symbol(imgattr) => imgurl, :alt => alt], [])
+
+        let atag = "a", aattr = "href", aurl = "https://julialang.org/", text = "The Julia Programming Language"
+            # Great Scott!
+            @test htm"<$atag $aattr=\"$aurl\">$text</$atag>" == JSX.Node(Symbol(atag), [Symbol(aattr) => aurl], [text])
+            @test htm"<$atag $aattr=\"$aurl\">$text $img</$atag>" == JSX.Node(Symbol(atag), [Symbol(aattr) => aurl], [text, img])
+        end
     end
 end

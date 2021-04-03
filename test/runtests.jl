@@ -1,8 +1,6 @@
 using JSX
 using Test
 
-using JSX: iscomment, isroot, Node
-
 using Markdown
 
 @testset "JSX.jl" begin
@@ -14,6 +12,7 @@ using Markdown
     include("test_unicode.jl")
     include("test_strinterp.jl")
     include("test_objinterp.jl")
+    include("test_components.jl")
     include("test_showplain.jl")
     include("test_showhtml.jl")
 end

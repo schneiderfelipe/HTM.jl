@@ -14,16 +14,16 @@
 
             <h1>Awesome title</h1>
             <p>A <strong>bold</strong> paragraph!</p>
-            <img src="kitty.jpg" />
+            <img src=kitty.jpg />
 
             <hr />
 
-            <person name="John" surname="Doe">
+            <div id=John class=person>
                 A <em>nice</em> guy
-            </person>
+            </div>
         </section>
-        <first /><second />
-    """) == "<section><noscript><strong>Sorry, no JavaScript!</strong></noscript><h1>Awesome title</h1><p>A <strong>bold</strong> paragraph!</p><img src=\"kitty.jpg\" /><hr /><person name=\"John\" surname=\"Doe\"> A <em>nice</em> guy </person></section><first /><second />"
+        <img /><second />
+    """) == "<section><noscript><strong>Sorry, no JavaScript!</strong></noscript><h1>Awesome title</h1><p>A <strong>bold</strong> paragraph!</p><img src=\"kitty.jpg\" /><hr /><div id=\"John\" class=\"person\"> A <em>nice</em> guy </div></section><img /><second />"
 
     @test repr("text/plain", htm"<∫ dω=\"dx\" x₀=\"0\" x₁=\"∞\" note=\"hard math\">√(x²)</∫>") == "<∫ dω=\"dx\" x₀=\"0\" x₁=\"∞\" note=\"hard math\">√(x²)</∫>"
 
