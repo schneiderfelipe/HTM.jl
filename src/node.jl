@@ -1,21 +1,24 @@
 """
 A node in the tree.
 """
-struct Node{T<:Union{AbstractString,Symbol}}
-    name::T
-    attributes::Vector{Pair{T,String}}
-    children::Vector  # TODO: transform children into data and parameterize by it. Can we wrap all types and be stable?
+struct Node{S<:Union{AbstractString,Symbol},T<:AbstractVector,U<:AbstractVector}
+    name::S
+    attributes::T
+    children::U
 end
-Node(name, attributes, children) = Node{typeof(name)}(name, attributes, children)
+Node(name, attributes, children) = Node{typeof(name),typeof(children)}(name, attributes, children)
 Node(name, attributes) = Node(name, attributes, [])
-Node(name) = Node(name, [])
+Node(name::AbstractString) = Node(name, Pair{String,String}[])
+Node(name::Symbol) = Node(name, Pair{Symbol,String}[])
 
 children(node::Node) = node.children
 
+ # TODO: can we know this at compilation time?
 iscomment(node::Node) = Symbol(node.name) == :comment
-isroot(node::Node) = Symbol(node.name) == :dummy
-iscomponent(node::Node) = Symbol(node.name) == :component
 iscommon(node::Node) = Symbol(node.name) in commontags
+iscomponent(node::Node) = Symbol(node.name) == :component
+isroot(node::Node) = Symbol(node.name) == :dummy
+istext(node::Node) = Symbol(node.name) == :text
 
 hassinglenode(node::Node) = length(children(node)) == 1 && first(children(node)) isa Node
 
@@ -27,44 +30,38 @@ Base.show(io::IO, mime::MIME"text/plain", node::Node) = html(io, node, mime)
 
 # TODO: escape stuff
 function html(io::IO, node::Node, mime=MIME("text/html"))
-    if isroot(node) || iscomponent(node)  # TODO: can we know the root at compilation time?
+    if isroot(node) || iscomponent(node)  # TODO: can we know this at compilation time?
         for child in children(node)
-            if mime isa MIME"text/html"  # TODO: function barrier?
-                html(io, child)  # Rich output
-            else
-                html(io, child, mime)
-            end
+            htmltext(io, child, mime)
         end
     else
         htmlnode(io, node, mime)
     end
 end
 
+htmltext(io::IO, value, ::MIME"text/html") = html(io, value)  # Rich output
+htmltext(io::IO, value, mime) = html(io, value, mime)
+
 # Actual nonroot node
 function htmlnode(io::IO, node::Node, mime=MIME("text/html"))
     if isempty(children(node))
-        # TODO: some might not like it for some tags (e.g., div)
         htmltag(io, node)
         print(io, " />")
     else
-        if iscomment(node) # TODO: can we know a comment at compilation time?
+        if iscomment(node)  # TODO: can we know this at compilation time?
             print(io, "<!--")
-        else
+        elseif !istext(node)
             htmltag(io, node)
             print(io, ">")
         end
 
         for child in children(node)
-            if mime isa MIME"text/html"  # TODO: function barrier?
-                html(io, child)  # Rich output
-            else
-                html(io, child, mime)
-            end
+            htmltext(io, child, mime)
         end
 
-        if iscomment(node) # TODO: can we know a comment at compilation time?
+        if iscomment(node)  # TODO: can we know this at compilation time?
             print(io, "-->")
-        else
+        elseif !istext(node)
             print(io, "</$(node.name)>")
         end
     end

@@ -4,13 +4,13 @@
     @test htm"<hr/>" == JSX.Node(:hr, [], [])
     @test htm"<meta charset=\"UTF-8\" />" == JSX.Node(:meta, [:charset => "UTF-8"], [])
     @test htm"<a></a>" == JSX.Node(:a, [], [])
-    @test htm"<title>JSX</title>" == JSX.Node(:title, [], ["JSX"])
+    @test htm"<title>JSX</title>" == JSX.Node(:title, [], [JSX.Node(:text, [], ["JSX"])])
     @test htm"<html lang=\"pt-BR\"></html>" == JSX.Node(:html, [:lang => "pt-BR"], [])
-    @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == JSX.Node(:a, [:href => "kitty.jpg"], ["A kitty!"])
-    @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == JSX.Node(:noscript, [], [JSX.Node(:strong, [], ["Sorry, no JavaScript!"])])
+    @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == JSX.Node(:a, [:href => "kitty.jpg"], [JSX.Node(:text, [], ["A kitty!"])])
+    @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == JSX.Node(:noscript, [], [JSX.Node(:strong, [], [JSX.Node(:text, [], ["Sorry, no JavaScript!"])])])
 
     # Observe that the returned value is always a JSX.Node
-    @test htm"Ceci nest pas une string" == JSX.Node(:dummy, [], ["Ceci nest pas une string"])
+    @test htm"Ceci nest pas une string" == JSX.Node(:text, [], ["Ceci nest pas une string"])
 
     # A wild lonely tag has appeared!
     @test htm"""
@@ -20,11 +20,11 @@
             <img src="kitty.jpg" />
         </section>
     """ == JSX.Node(:section, [], [
-        JSX.Node(:h1, [], ["Awesome title"]),
+        JSX.Node(:h1, [], [JSX.Node(:text, [], ["Awesome title"])]),
         JSX.Node(:p, [], [
-            "A ",
-            JSX.Node(:strong, [], ["bold"]),
-            " paragraph!",
+            JSX.Node(:text, [], ["A "]),
+            JSX.Node(:strong, [], [JSX.Node(:text, [], ["bold"])]),
+            JSX.Node(:text, [], [" paragraph!"]),
         ]),
         JSX.Node(:img, [:src => "kitty.jpg"], []),
     ])
@@ -35,9 +35,9 @@
         A <em>nice</em> guy
     </div>
     """ == JSX.Node(:div, [:id => "John", :class => "person"], [
-        " A ",
-        JSX.Node(:em, [], ["nice"]),
-        " guy ",
+        JSX.Node(:text, [], [" A "]),
+        JSX.Node(:em, [], [JSX.Node(:text, [], ["nice"])]),
+        JSX.Node(:text, [], [" guy "]),
     ])
 
     # A wild root node has appeared!
@@ -49,5 +49,5 @@
             <!-- I am a comment! -->
             I am not.
         </div>
-    """ == JSX.Node(:div, [], [JSX.Node(:comment, [], [" I am a comment! "]), " I am not. "])
+    """ == JSX.Node(:div, [], [JSX.Node(:comment, [], [JSX.Node(:text, [], [" I am a comment! "])]), JSX.Node(:text, [], [" I am not. "])])
 end

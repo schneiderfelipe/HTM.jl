@@ -115,7 +115,7 @@ function parse!(root::Node, data::AbstractString, i::Int=firstindex(data), n::In
 		text = replace(text, r"\s+" => ' ')
 
 		# Ignore empty children
-		!isempty(text) && !isnothing(findfirst(!isspace, text)) && push!(children(root), text)
+		!isempty(text) && !isnothing(findfirst(!isspace, text)) && push!(children(root), Node("text", [], [text]))
 	end
 
 	return parse!(root, data, i, n)
@@ -167,6 +167,7 @@ function toexprleaf(node::Node)
 		Expr(:block, fallbackexpr),  # catch
 	)
 end
+toexprtext(node::Node) = :(JSX.Node(Symbol("text"), $(toexpr(node.attributes)), $(toexprwithcode(children(node)))))
 toexprbranch(node::Node) = :(JSX.Node(Symbol($(toexpr(node.name))), $(toexpr(node.attributes)), $(toexprwithcode(children(node)))))
 
 # Append if vector, push otherwise
@@ -174,10 +175,10 @@ push_or_append!(arr::AbstractVector, ret::AbstractVector) = append!(arr, ret)
 push_or_append!(arr::AbstractVector, ret) = push!(arr, ret)
 
 function toexprwithcode(node::Node)
+	istext(node) && return toexprtext(node)
 	isempty(node) && return toexprleaf(node)
 	if hassinglenode(node) && isroot(node)
 		singlechild = first(children(node))
-		# TODO: this might change if we wrap strings and objects
 		singlechild isa Node && return toexprwithcode(singlechild)
 	end
 	return toexprbranch(node)

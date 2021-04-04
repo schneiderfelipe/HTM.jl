@@ -6,9 +6,9 @@
         A <em>nice</em> guy
     </div>
     """ == JSX.Node(:div, [:id => "John", :class => "person"], [
-        " A ",
-        JSX.Node(:em, [], ["nice"]),
-        " guy ",
+        JSX.Node(:text, [], [" A "]),
+        JSX.Node(:em, [], [JSX.Node(:text, [], ["nice"])]),
+        JSX.Node(:text, [], [" guy "]),
     ])
 
     let lang = "pt-BR"

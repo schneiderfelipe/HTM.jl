@@ -5,7 +5,7 @@
                 <span>$name</span>
                 <span>$continent</span>
             </div>
-        """ == JSX.Node(:div, [], [JSX.Node(:span, [], ["Brazil"]), JSX.Node(:span, [], ["south-america"])])
+        """ == JSX.Node(:div, [], [JSX.Node(:span, [], [JSX.Node(:text, [], ["Brazil"])]), JSX.Node(:span, [], [JSX.Node(:text, [], ["south-america"])])])
 
         # Using quotation marks
         @test htm"""
@@ -19,8 +19,8 @@
 
         let atag = "a", aattr = "href", aurl = "https://julialang.org/", text = "The Julia Programming Language"
             # Great Scott!
-            @test htm"<$atag $aattr=\"$aurl\">$text</$atag>" == JSX.Node(Symbol(atag), [Symbol(aattr) => aurl], [text])
-            @test htm"<$atag $aattr=\"$aurl\">$text $img</$atag>" == JSX.Node(Symbol(atag), [Symbol(aattr) => aurl], [text, img])
+            @test htm"<$atag $aattr=\"$aurl\">$text</$atag>" == JSX.Node(Symbol(atag), [Symbol(aattr) => aurl], [JSX.Node(:text, [], [text])])
+            @test htm"<$atag $aattr=\"$aurl\">$text $img</$atag>" == JSX.Node(Symbol(atag), [Symbol(aattr) => aurl], [JSX.Node(:text, [], [text, img])])
         end
     end
 end
