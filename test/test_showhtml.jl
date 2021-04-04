@@ -66,6 +66,4 @@
     let f(; name="John", surname="Doe") = htm"<div class=name><h1>$surname,</h1> <h2>$name</h2></div>"
         @test repr("text/html", htm"<div class=person><f surname=Silva name=João /></div>") == """<div class="person"><div class="name"><h1>Silva,</h1><h2>João</h2></div></div>"""
     end
-
-    # TODO: support and test "image/svg+xml" and "image/png", see ideas here: <https://github.com/JuliaLang/julia/blob/master/stdlib/Markdown/src/render/rich.jl>
 end
