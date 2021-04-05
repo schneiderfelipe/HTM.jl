@@ -5,7 +5,7 @@
                 <span>$name</span>
                 <span>$continent</span>
             </div>
-        """ == JSX.Node{:div}([JSX.Node{:span}([JSX.Node{:text}(["Brazil"])]), JSX.Node{:span}([JSX.Node{:text}(["south-america"])])])
+        """ == JSX.Node{:div}([JSX.Node{:span}(["Brazil"]), JSX.Node{:span}(["south-america"])])
 
         # Using quotation marks
         @test htm"""
@@ -21,11 +21,11 @@
             # Great Scott!
             @test htm"<$atag $aattr=\"$aurl\">$text</$atag>" == JSX.Node(
                 atag,
-                [JSX.Node{:text}([text])],
+                [text],
                 [aattr => aurl],
             )
             @test htm"<$atag $aattr=\"$aurl\">$text $img</$atag>" == JSX.Node(
-                atag, [JSX.Node{:text}([text, img])],
+                atag, [text, img],
                 [aattr => aurl],
             )
         end

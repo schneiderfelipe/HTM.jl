@@ -1,4 +1,9 @@
 """
+Check if a string is empty of pure whitespace.
+"""
+isblank(str) = isempty(str) || isnothing(findfirst(!isspace, str))
+
+"""
 Append if vector, push otherwise.
 """
 pushorappend!(arr::AbstractVector, ret) = push!(arr, ret)
@@ -12,8 +17,7 @@ We also ensure the "\$" thing works properly.
 """
 pushexprorstr!(exprs::AbstractVector, expr) = !isnothing(expr) && push!(exprs, expr)
 function pushexprorstr!(exprs::AbstractVector, str::AbstractString)
-	# Ignore empty children
-	if !isempty(str) && !isnothing(findfirst(!isspace, str))
+	if !isblank(str)
 		if !isempty(exprs) && last(exprs) isa AbstractString
 			# Make strings contiguous
 			exprs[end] *= str

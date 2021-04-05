@@ -9,8 +9,8 @@ export @htm_str
 
 include("tags.jl")
 include("node.jl")
-include("parse.jl")
 include("utils.jl")
+include("parse.jl")
 include("macro.jl")
 include("render.jl")
 

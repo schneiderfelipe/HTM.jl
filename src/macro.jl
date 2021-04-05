@@ -77,8 +77,7 @@ function toexprwithcode(node::Node)
 	isempty(children(node)) && return toexprleaf(node)
 	return toexprbranch(node)
 end
-toexprwithcode(node::Node{:comment}) = :(JSX.Node{:comment}($(toexprwithcode(children(node)))))
-toexprwithcode(node::Node{:component}) = :(JSX.Node{:component}($(toexprwithcode(children(node)))))
+toexprwithcode(node::Union{Node{:comment},Node{:component}}) = :(JSX.Node{:comment}($(toexprwithcode(children(node)))))
 function toexprwithcode(node::Node{:dummy})
 	if length(children(node)) == 1
 		singlechild = first(children(node))
@@ -86,7 +85,6 @@ function toexprwithcode(node::Node{:dummy})
 	end
 	return toexprbranch(node)
 end
-toexprwithcode(node::Node{:text}) = :(JSX.Node{:text}($(toexprwithcode(children(node)))))
 
 function toexprbranch(node::Node)
 	return :(JSX.Node{Symbol($(toexpr(tag(node))))}(

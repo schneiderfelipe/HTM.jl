@@ -93,8 +93,7 @@ function parse!(parent::Node, data::AbstractString, i::Int=firstindex(data), n::
 
 		text = replace(text, r"\s+" => ' ')
 
-		# Ignore empty children
-		!isempty(text) && !isnothing(findfirst(!isspace, text)) && push!(children(parent), Node{:text}([text]))
+		isblank(text) || push!(children(parent), text)
 	end
 
 	return parse!(parent, data, i, n)

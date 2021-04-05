@@ -6,9 +6,9 @@
         A <em>nice</em> guy
     </div>
     """ == JSX.Node{:div}([
-            JSX.Node{:text}([" A "]),
-            JSX.Node{:em}([JSX.Node{:text}(["nice"])]),
-            JSX.Node{:text}([" guy "]),
+            " A ",
+            JSX.Node{:em}(["nice"]),
+            " guy ",
         ],
         ["id" => "John", "class" => "person"],
     )
