@@ -44,9 +44,10 @@
         $(Dict(1 => 2, 2 => 3))
     </span>""" == JSX.Node{:span}([6, ", ", [1, 2, 3], ", ", (1, 2, 3), ", ", Dict(2 => 3,1 => 2)])
 
-    # I heard you like interpolations so we put an interpolation in your interpolation!
-    # Unfortunately, this does not work as expected, but it should not fail.
-    # Plus, if it makes you feel better, it is consistent with how @md_str works, for instance.
+    # I heard you like interpolations so we put an interpolation in your
+    # interpolation! Unfortunately, this does not work as expected, but it
+    # should not fail. Plus, if it makes you feel better, it is consistent
+    # with how @md_str works, for instance.
     @test htm"""
         <section>
             <h1>$(md"I have a $(\"variable inside\")")</h1>
