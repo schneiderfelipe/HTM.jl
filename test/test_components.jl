@@ -29,27 +29,27 @@
     let f(; name="John", surname="Doe") = htm"<div class=name><h1>$surname,</h1> <h2>$name</h2></div>"
         @test htm"<div class=person><f /></div>" == JSX.Node{:div}(
             [JSX.Node{:dummy}([f()])],
-            ["class" => "person"],
+            [:class => "person"],
         )
         @test htm"<div class=person><f name=Sarah /></div>" == JSX.Node{:div}(
             [JSX.Node{:dummy}([f(name="Sarah")])],
-            ["class" => "person"],
+            [:class => "person"],
         )
         @test htm"<div class=person><f surname=Silva /></div>" == JSX.Node{:div}(
             [JSX.Node{:dummy}([f(surname="Silva")])],
-            ["class" => "person"],
+            [:class => "person"],
         )
         @test htm"<div class=person><f name=João surname=Silva /></div>" == JSX.Node{:div}(
             [JSX.Node{:dummy}([f(name="João", surname="Silva")])],
-            ["class" => "person"],
+            [:class => "person"],
         )
         @test htm"<div class=person><f name=João surname=Silva/></div>" == JSX.Node{:div}(
             [JSX.Node{:dummy}([f(name="João", surname="Silva")])],
-            ["class" => "person"],
+            [:class => "person"],
         )
         @test htm"<div class=person><f surname=Silva name=João /></div>" == JSX.Node{:div}(
             [JSX.Node{:dummy}([f(name="João", surname="Silva")])],
-            ["class" => "person"],
+            [:class => "person"],
         )
     end
 end

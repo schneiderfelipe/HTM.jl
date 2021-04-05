@@ -10,12 +10,12 @@
         # Using quotation marks
         @test htm"""
             <div id="$name" class="$continent" />
-        """ == JSX.Node{:div}(attrs=["id" => "Brazil", "class" => "south-america"])
+        """ == JSX.Node{:div}(attrs=[:id => "Brazil", :class => "south-america"])
     end
 
     let imgtag = "img", imgattr = "src", imgurl = "https://julialang.org/assets/infra/logo.svg", alt = "The Julia Programming Language"
         img = htm"<$imgtag $imgattr=$imgurl alt=$alt />"
-        @test img == JSX.Node(imgtag, attrs=[imgattr => imgurl, "alt" => alt])
+        @test img == JSX.Node(imgtag, attrs=[imgattr => imgurl, :alt => alt])
 
         let atag = "a", aattr = "href", aurl = "https://julialang.org/", text = "The Julia Programming Language"
             # Great Scott!

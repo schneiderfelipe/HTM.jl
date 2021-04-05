@@ -2,13 +2,13 @@
     # Some simple tests for single tags in different forms.
     @test htm"<hr />" == JSX.Node(:hr)
     @test htm"<hr/>" == JSX.Node(:hr)
-    @test htm"<meta charset=\"UTF-8\" />" == JSX.Node{:meta}(attrs=["charset" => "UTF-8"])
+    @test htm"<meta charset=\"UTF-8\" />" == JSX.Node{:meta}(attrs=[:charset => "UTF-8"])
     @test htm"<a></a>" == JSX.Node(:a)
     @test htm"<title>JSX</title>" == JSX.Node{:title}(["JSX"])
-    @test htm"<html lang=\"pt-BR\"></html>" == JSX.Node{:html}(attrs=["lang" => "pt-BR"])
+    @test htm"<html lang=\"pt-BR\"></html>" == JSX.Node{:html}(attrs=[:lang => "pt-BR"])
     @test htm"<a href=\"kitty.jpg\">A kitty!</a>" == JSX.Node{:a}(
         ["A kitty!"],
-        ["href" => "kitty.jpg"],
+        [:href => "kitty.jpg"],
     )
     @test htm"<noscript><strong>Sorry, no JavaScript!</strong></noscript>" == JSX.Node{:noscript}([JSX.Node{:strong}(["Sorry, no JavaScript!"])])
 
@@ -28,7 +28,7 @@
             JSX.Node{:strong}(["bold"]),
             " paragraph!",
         ]),
-        JSX.Node{:img}(attrs=["src" => "kitty.jpg"]),
+        JSX.Node{:img}(attrs=[:src => "kitty.jpg"]),
     ])
 
     # A wild attribute has appeared!
@@ -41,7 +41,7 @@
             JSX.Node{:em}(["nice"]),
             " guy ",
         ],
-        ["id" => "John", "class" => "person"],
+        [:id => "John", :class => "person"],
     )
 
     # A wild root node has appeared!

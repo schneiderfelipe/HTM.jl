@@ -1,4 +1,10 @@
 """
+Process and normalize attributes.
+"""
+processattr(attr::Pair, f) = f(first(attr)) => last(attr)
+processattrs(attrs::AbstractVector, f) = map(attr -> processattr(attr, f), attrs)
+
+"""
 Check if a string is empty of pure whitespace.
 """
 isblank(str) = isempty(str) || isnothing(findfirst(!isspace, str))

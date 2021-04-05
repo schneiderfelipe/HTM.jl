@@ -37,6 +37,7 @@
         (1, 2, 3),
         ("Hi", 5, 23.0),
         Dict(1 => 2, 2 => 3),
+        Dict(:fnord => 23, :eris => 5),
         Dict("fnord" => 23, "eris" => 5),
     )
         io = IOBuffer()

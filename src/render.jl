@@ -3,7 +3,7 @@ Base.show(io::IO, mime::MIME"text/plain", node::Node) = html(io, node, mime)
 Base.show(io::IO, mime::MIME"text/html", node::Node) = html(io, node, mime)
 
 pairtag(pair::Pair) = "$(first(pair))=\"$(last(pair))\""
-attrstag(node::Node) = isempty(attrs(node)) ? "" : " " * join([pairtag(pair) for pair in attrs(node)], ' ')
+attrstag(node::Node) = isempty(attrs(node)) ? "" : " " * join(map(pairtag, attrs(node)), ' ')
 
 begintag(node::Node) = "<$(tag(node))$(attrstag(node))$(isempty(children(node)) ? " /" : "")>"
 begintag(::Node{:comment}) = "<!--"

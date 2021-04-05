@@ -89,7 +89,7 @@ end
 function toexprbranch(node::Node)
 	return :(JSX.Node{Symbol($(toexpr(tag(node))))}(
 		$(toexprwithcode(children(node))),
-		$(toexpr(attrs(node))),
+		$(toexpr(attrs(node, String))),
 	))
 end
 
@@ -101,7 +101,10 @@ function toexprleaf(node::Node)
 	if isempty(attrs(node))
 		callexpr = :(JSX.Node{:dummy}([$(Symbol(toexpr(tag(node))))()]))
 	else
-		callexpr = :(JSX.Node{:dummy}([$(Symbol(toexpr(tag(node))))(; [Symbol(first(pair)) => last(pair) for pair in $(toexpr(attrs(node)))]...)]))
+		callexpr = :(JSX.Node{:dummy}([$(Symbol(toexpr(tag(node))))(; map(
+			attr -> Symbol(first(attr)) => last(attr),
+			$(toexpr(attrs(node, String)))
+		)...)]))
 	end
 
 	fallbackexpr = Expr(:if,
