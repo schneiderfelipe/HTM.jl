@@ -10,6 +10,13 @@ Check if a string is empty of pure whitespace.
 isblank(str) = isempty(str) || isnothing(findfirst(!isspace, str))
 
 """
+Recreate a vector as an expression.
+Optionally, apply a function to each element beforehand.
+"""
+vec2expr(vec::AbstractVector) = :([$(vec...)])
+vec2expr(f, vec::AbstractVector) = vec2expr(map(f, vec))
+
+"""
 Append if vector, push otherwise.
 """
 pushorappend!(arr::AbstractVector, ret) = push!(arr, ret)

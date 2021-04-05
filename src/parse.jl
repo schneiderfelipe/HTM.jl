@@ -14,8 +14,7 @@ function parse!(parent::Node, data::AbstractString, i::Int=firstindex(data), n::
 	elseif data[i] == '<'
 		i = nextind(data, i)
 
-		# TODO: we may accept objects as attributes in the future.
-		attrs = Pair{String,String}[]
+		attrs = Pair{String,Any}[]
 
 		haschildren = true
 		if startswith(data[i:n], "!--")
@@ -44,26 +43,24 @@ function parse!(parent::Node, data::AbstractString, i::Int=firstindex(data), n::
 						key = rest[r:prevind(rest, s)]
 						r = s = nextind(rest, s)
 						if rest[r] == '"'
-							r = nextind(rest, r)
-							s = findnext('"', rest, r)
-
-							value = rest[r:prevind(rest, s)]
-							push!(attrs, key => value)
-							r = s = nextind(rest, s)
+							# We leave the quotation marks because an object will be parsed later
+							s = findnext('"', rest, nextind(rest, r))
+							push!(attrs, key => rest[r:s])
 						else
 							# No quotation mark
-							s = findnext(isspace, rest, r)
+							if rest[r] == '$'
+								# Step forward and ignore '$'
+								r = nextind(rest, r)
+							end
+							s = findnext(isspace, rest, r)  # TODO: we do not tolerate spaces between '=' and the value?
 							if isnothing(s)
 								# Last attribute
-								value = rest[r:m]
-								push!(attrs, key => value)
+								push!(attrs, key => rest[r:m])
 								break
 							end
-
-							value = rest[r:prevind(rest, s)]
-							push!(attrs, key => value)
-							r = s = nextind(rest, s)
+							push!(attrs, key => rest[r:prevind(rest, s)])
 						end
+						r = s = nextind(rest, s)
 					elseif isspace(rest[r])
 						if r < m
 							r = s = nextind(rest, r)

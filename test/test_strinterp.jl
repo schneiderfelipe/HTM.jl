@@ -1,4 +1,8 @@
 @testset "String interpolation" begin
+    let lang = "pt-BR"
+        @test htm"<html lang=$lang></html>" == JSX.Node{:html}(attrs=[:lang => lang])
+    end
+
     let name = "Brazil", continent = "south-america"
         @test htm"""
             <div>

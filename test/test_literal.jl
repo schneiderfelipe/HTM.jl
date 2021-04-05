@@ -1,5 +1,5 @@
 @testset "Literals" begin
-    # Some simple tests for single tags in different forms.
+    # Some simple tests for single tags in different forms
     @test htm"<hr />" == JSX.Node(:hr)
     @test htm"<hr/>" == JSX.Node(:hr)
     @test htm"<meta charset=\"UTF-8\" />" == JSX.Node{:meta}(attrs=[:charset => "UTF-8"])

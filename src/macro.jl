@@ -1,4 +1,18 @@
-# TODO: clean this up.
+abstract type AbstractContext end
+struct DefaultContext <: AbstractContext end
+struct LeafContext <: AbstractContext end
+struct BranchContext <: AbstractContext end
+struct CodeContext <: AbstractContext end
+struct LeafCodeContext <: AbstractContext end
+struct CommonLeafCodeContext <: AbstractContext end
+struct CommonContext <: AbstractContext end
+
+struct AttributeContext <: AbstractContext end
+
+Base.:+(::LeafContext, ::CodeContext) = LeafCodeContext()
+Base.:+(::CodeContext, ::LeafContext) = LeafCodeContext()
+Base.:+(::LeafCodeContext, ::CommonContext) = CommonLeafCodeContext()
+Base.:+(::CommonContext, ::LeafCodeContext) = CommonLeafCodeContext()
 
 """
 Time to create a macro!
@@ -13,24 +27,74 @@ julia> htm"<h1>Hello world!</h1>"
 macro htm_str(s)
 	htmexpr(s)
 end
-htmexpr(s::AbstractString) = esc(toexprwithcode(parse(s)))
+htmexpr(s::AbstractString) = esc(toexpr(parse(s), CodeContext()))
 
-toexpr(vec::AbstractVector) = :([$(toexpr.(vec)...)])
-toexpr(str::AbstractString) = Meta.parse("\"$(str)\"")  # Allow string interpolation
-toexpr(pair::Pair) = :($(toexpr(first(pair))) => $(toexpr(last(pair))))
-toexpr(x) = x  # Keep objects in general
+# Keep any objects in the tree.
+toexpr(x, ::AbstractContext) = x
 
-function toexprwithcode(vec::AbstractVector)
-	# We may require more types in the future.
-	arr = Union{Expr,String,Symbol}[]
+# Propagate expression generation to vectors, but keep code-generated objects
+# next to its context.
+toexpr(vec::AbstractVector, context::AbstractContext) = vec2expr(x -> toexpr(x, context), vec)
+function toexpr(vec::AbstractVector, context::CodeContext)
+	arr = Union{Expr,String,Symbol}[]  # Do we need more types?
 	for v in vec
-		pushorappend!(arr, toexprwithcode(v))
+		pushorappend!(arr, toexpr(v, context))
 	end
-	return :([$(arr...)])
+	return vec2expr(arr)
 end
 
-toexprwithcode(str::AbstractString) = toexprwithcode!([], str)
-function toexprwithcode!(exprs::AbstractVector, str::AbstractString, i::Int=firstindex(str), n::Int=lastindex(str))  # Return a vector of expressions (some are strings)
+function toexpr(node::Node, context::AbstractContext)
+	isempty(children(node)) && return toexpr(node, context + LeafContext())
+	return toexprbranch(node, context)
+end
+function toexpr(node::Node{:dummy}, context::AbstractContext)
+	if length(children(node)) == 1
+		singlechild = first(children(node))
+		singlechild isa Node && return toexpr(singlechild, context)
+	end
+	return toexprbranch(node, context)
+end
+toexpr(node::Node{:comment}, context::AbstractContext) = :(JSX.Node{:comment}(
+	$(toexpr(children(node), context)),
+))
+
+toexprbranch(node::Node, context::CodeContext) = :(JSX.Node{Symbol($(toexpr(tag(node), DefaultContext())))}(
+	$(toexpr(children(node), context)),
+	$(toexpr(attrs(node, String), AttributeContext())),
+))
+
+toexpr(node::Node, ::CommonLeafCodeContext) = :(JSX.Node{Symbol($(toexpr(tag(node), DefaultContext())))}(
+	attrs=$(toexpr(attrs(node, String), AttributeContext())),
+))
+
+function toexpr(node::Node, context::LeafCodeContext)
+	nodeexpr = toexpr(node, context + CommonContext())
+	iscommon(node) && return nodeexpr
+
+	# Components have to be wrapped in dummy Nodes so that we always return Nodes, even after component evaluation
+	if isempty(attrs(node))
+		callexpr = :(JSX.Node{:dummy}([
+			$(Symbol(toexpr(tag(node), DefaultContext())))()
+		]))
+	else
+		callexpr = :(JSX.Node{:dummy}([
+			$(Symbol(toexpr(tag(node), DefaultContext())))(; map(
+				attr -> Symbol(first(attr)) => last(attr),
+				$(toexpr(attrs(node, String), AttributeContext()))
+			)...)
+		]))
+	end
+
+	return trycatchexpr(callexpr, nodeexpr)
+end
+
+toexpr(str::AbstractString, ::AbstractContext) = Meta.parse("\"$(str)\"")  # Allow string interpolation
+function toexpr(str::AbstractString, ::AttributeContext)
+	# Probably already contains quotation marks
+	return trycatchexpr(Meta.parse(str), str)
+end
+toexpr(str::AbstractString, context::CodeContext) = toexpr!([], str, context)
+function toexpr!(exprs::AbstractVector, str::AbstractString, context::CodeContext, i::Int=firstindex(str), n::Int=lastindex(str))  # Return a vector of expressions (some are strings)
 	j = findnext('$', str, i)
 	if !isnothing(j)
 		k = nextind(str, j)
@@ -62,7 +126,7 @@ function toexprwithcode!(exprs::AbstractVector, str::AbstractString, i::Int=firs
 		Meta.parse(str, k, greedy=false)
 	catch err
 		if err isa Meta.ParseError
-			# We ignore code that fails to parse, similar to how @md_str behaves.
+			# We ignore code that fails to parse, similar to how @md_str behaves
 			"\$", k
 		else
 			rethrow()
@@ -70,56 +134,25 @@ function toexprwithcode!(exprs::AbstractVector, str::AbstractString, i::Int=firs
 	end
 
 	pushexprorstr!(exprs, expr)
-	return toexprwithcode!(exprs, str, i, n)
+	return toexpr!(exprs, str, context, i, n)
 end
 
-function toexprwithcode(node::Node)
-	isempty(children(node)) && return toexprleaf(node)
-	return toexprbranch(node)
-end
-toexprwithcode(node::Node{:comment}) = :(JSX.Node{:comment}($(toexprwithcode(children(node)))))
-function toexprwithcode(node::Node{:dummy})
-	if length(children(node)) == 1
-		singlechild = first(children(node))
-		singlechild isa Node && return toexprwithcode(singlechild)
-	end
-	return toexprbranch(node)
-end
+toexpr(pair::Pair, context::AttributeContext) = :($(toexpr(first(pair), DefaultContext())) => $(toexpr(last(pair), context)))
 
-function toexprbranch(node::Node)
-	return :(JSX.Node{Symbol($(toexpr(tag(node))))}(
-		$(toexprwithcode(children(node))),
-		$(toexpr(attrs(node, String))),
-	))
-end
-
-function toexprleaf(node::Node)
-	nodeexpr = toexprbranch(node)
-	iscommon(node) && return nodeexpr
-
-	# Components have to be wrapped in dummy Nodes so that we always return Nodes, even after component evaluation
-	if isempty(attrs(node))
-		callexpr = :(JSX.Node{:dummy}([$(Symbol(toexpr(tag(node))))()]))
-	else
-		callexpr = :(JSX.Node{:dummy}([$(Symbol(toexpr(tag(node))))(; map(
-			attr -> Symbol(first(attr)) => last(attr),
-			$(toexpr(attrs(node, String)))
-		)...)]))
-	end
-
-	fallbackexpr = Expr(:if,
-		:(err isa UndefVarError),
-		Expr(:block,  # then
-			nodeexpr,
+trycatchexpr(tryexpr, undefvarexpr) = Expr(:try,
+	Expr(:block,
+		tryexpr,
+	),
+	:err,
+	Expr(:block,  # catch
+		Expr(:if,
+			:(err isa UndefVarError),
+			Expr(:block,  # then
+				undefvarexpr,
+			),
+			Expr(:block,  # else
+				:(rethrow()),
+			),
 		),
-		Expr(:block,  # else
-			:(rethrow()),
-		),
-	)
-
-	return Expr(:try,
-		Expr(:block, callexpr),
-		:err,
-		Expr(:block, fallbackexpr),  # catch
-	)
-end
+	),
+)

@@ -64,7 +64,13 @@
     """) == "<div><!-- I am a comment! --> I am not. </div>"
 
     # Components!
-    let f(; name="John", surname="Doe") = htm"<div class=name><h1>$surname,</h1> <h2>$name</h2></div>"
-        @test repr("text/html", htm"<div class=person><f surname=Silva name=João /></div>") == """<div class="person"><div class="name"><h1>Silva,</h1><h2>João</h2></div></div>"""
+    let f(; name="John", surname="Doe") = htm"""
+        <div id="$name $surname" class=name>
+            <h1 id=$surname>$surname,</h1>
+            <h2 id=$name>$name</h2>
+        </div>
+    """
+        @test repr("text/html", htm"<div id=\"manager\" class=person><f /></div>") == """<div id="manager" class="person"><div id="John Doe" class="name"><h1 id="Doe">Doe,</h1><h2 id="John">John</h2></div></div>"""
+        @test repr("text/html", htm"<div id=\"actor\" class=person><f surname=Silva name=João /></div>") == """<div id="actor" class="person"><div id="João Silva" class="name"><h1 id="Silva">Silva,</h1><h2 id="João">João</h2></div></div>"""
     end
 end
