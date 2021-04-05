@@ -15,4 +15,6 @@ using Markdown
     include("test_components.jl")
     include("test_showplain.jl")
     include("test_showhtml.jl")
+
+    # TODO: attributes with weird types
 end

@@ -77,7 +77,7 @@ function toexprwithcode(node::Node)
 	isempty(children(node)) && return toexprleaf(node)
 	return toexprbranch(node)
 end
-toexprwithcode(node::Union{Node{:comment},Node{:component}}) = :(JSX.Node{:comment}($(toexprwithcode(children(node)))))
+toexprwithcode(node::Node{:comment}) = :(JSX.Node{:comment}($(toexprwithcode(children(node)))))
 function toexprwithcode(node::Node{:dummy})
 	if length(children(node)) == 1
 		singlechild = first(children(node))
@@ -97,10 +97,11 @@ function toexprleaf(node::Node)
 	nodeexpr = toexprbranch(node)
 	iscommon(node) && return nodeexpr
 
+	# Components have to be wrapped in dummy Nodes so that we always return Nodes, even after component evaluation
 	if isempty(attrs(node))
-		callexpr = :(JSX.Node{:component}([$(Symbol(toexpr(tag(node))))()]))
+		callexpr = :(JSX.Node{:dummy}([$(Symbol(toexpr(tag(node))))()]))
 	else
-		callexpr = :(JSX.Node{:component}([$(Symbol(toexpr(tag(node))))(; [Symbol(first(pair)) => last(pair) for pair in $(toexpr(attrs(node)))]...)]))
+		callexpr = :(JSX.Node{:dummy}([$(Symbol(toexpr(tag(node))))(; [Symbol(first(pair)) => last(pair) for pair in $(toexpr(attrs(node)))]...)]))
 	end
 
 	fallbackexpr = Expr(:if,

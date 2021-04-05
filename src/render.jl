@@ -7,11 +7,11 @@ attrstag(node::Node) = isempty(attrs(node)) ? "" : " " * join([pairtag(pair) for
 
 begintag(node::Node) = "<$(tag(node))$(attrstag(node))$(isempty(children(node)) ? " /" : "")>"
 begintag(::Node{:comment}) = "<!--"
-begintag(::Union{Node{:component},Node{:dummy}}) = ""
+begintag(::Node{:dummy}) = ""
 
 endtag(node::Node) = "</$(tag(node))>"
 endtag(::Node{:comment}) = "-->"
-endtag(::Union{Node{:component},Node{:dummy}}) = ""
+endtag(::Node{:dummy}) = ""
 
 # Inspired by <https://github.com/JuliaLang/julia/blob/master/stdlib/Markdown/src/render/rich.jl>
 function bestmime(x!)
