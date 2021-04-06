@@ -10,6 +10,15 @@ A different way of writing HTML in Julia, using JSX ideas.
 ```julia
 using JSX
 
+sayhi(whom) = htm"<title>Hello, $(whom)</title>"
+
+sayhi("world!")
+# => <title>Hello, world&#33;</title>
+```
+
+Components are also supported:
+
+```julia
 function usergreeting()
     return htm"<h1>Welcome back!</h1>"
 end
