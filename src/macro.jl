@@ -6,6 +6,7 @@ We want to do the following.
 # Examples
 ```jldoctest
 julia> htm"<h1>Hello world!</h1>"
+<h1>Hello world&#33;</h1>
 ```
 """
 macro htm_str(s)
