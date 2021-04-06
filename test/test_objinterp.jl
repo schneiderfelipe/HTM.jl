@@ -36,6 +36,12 @@
         @test htm"<section>$title</section>" == JSX.Node{:section}([JSX.Node{:h1}(["Hello ", friend])])
     end
 
+    # Native HTML
+    let title = html"<h1>Hello world!</h1>"
+        @test htm"<section>$title</section>" == JSX.Node{:section}([title])
+        @test repr("text/html", htm"<section>$title</section>") == repr("text/html", JSX.Node{:section}([JSX.Node{:h1}(["Hello world!"])]))
+    end
+
     # Wild containers have appeared!
     @test htm"""<span>
         $(1 + 2 + 3),

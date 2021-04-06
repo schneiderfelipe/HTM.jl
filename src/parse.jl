@@ -43,22 +43,33 @@ function parse!(parent::Node, data::AbstractString, i::Int=firstindex(data), n::
                         key = rest[r:prevind(rest, s)]
                         r = s = nextind(rest, s)
                         if rest[r] == '"'
-                            # We leave the quotation marks because an object will be parsed later
+                            # We definitely received a string, possibly with
+                            # string interpolations. We leave the quotation
+                            # marks because an object will be parsed later.
                             s = findnext('"', rest, nextind(rest, r))
                             push!(attrs, key => rest[r:s])
-                        else
-                            # No quotation mark
-                            if rest[r] == '$'
-                                # Step forward and ignore '$'
-                                r = nextind(rest, r)
-                            end
-                            s = findnext(isspace, rest, r)  # TODO: we do not tolerate spaces between '=' and the value?
+                        elseif rest[r] == '$'
+                            # We definitely received an object. Step forward
+                            # and ignore the '$'.
+                            r = nextind(rest, r)
+                            s = findnext(isspace, rest, r)
                             if isnothing(s)
                                 # Last attribute
                                 push!(attrs, key => rest[r:m])
                                 break
                             end
                             push!(attrs, key => rest[r:prevind(rest, s)])
+                        else
+                            # No quotation mark means we attempt to parse a
+                            # literal value, but fallback to a string. No
+                            # string interpolation here!
+                            s = findnext(isspace, rest, r)
+                            if isnothing(s)
+                                # Last attribute
+                                push!(attrs, key => literalorquote(rest[r:m]))
+                                break
+                            end
+                            push!(attrs, key => literalorquote(rest[r:prevind(rest, s)]))
                         end
                         r = s = nextind(rest, s)
                     elseif isspace(rest[r])
@@ -119,3 +130,22 @@ Check whether we have reached the end of the current tag.
 """
 hasfinished(parent::Node, data::AbstractString, i::Int=firstindex(data), n::Int=lastindex(data)) = startswith(data[i:n], endtag(parent))
 hasfinished(parent::Node{:dummy}, data::AbstractString, i::Int=firstindex(data), n::Int=lastindex(data)) = false
+
+"""
+Attempt to parse a literal value, or quote and return a string.
+"""
+function literalorquote(str::AbstractString)
+    for T in (Int, Bool, Float64)
+        val = try
+            Base.parse(T, str)
+        catch err
+            if err isa ArgumentError
+                continue
+            end
+            rethrow()
+        end
+        return val
+    end
+    # Quote strings because we will attempt to string interpolate later.
+    return "\"$(str)\""
+end
