@@ -23,9 +23,9 @@
             </div>
         </section>
         <img /><second />
-    """) == "<section><noscript><strong>Sorry, no JavaScript!</strong></noscript><h1>Awesome title</h1><p>A <strong>bold</strong> paragraph!</p><img src=\"kitty.jpg\" /><hr /><div id=\"John\" class=\"person\"> A <em>nice</em> guy </div></section><img /><second />"
+    """) == "<section><noscript><strong>Sorry, no JavaScript&#33;</strong></noscript><h1>Awesome title</h1><p>A <strong>bold</strong> paragraph&#33;</p><img src=\"kitty.jpg\" /><hr /><div id=\"John\" class=\"person\"> A <em>nice</em> guy </div></section><img /><second />"
 
-    @test repr("text/plain", htm"<∫ dω=\"dx\" x₀=\"0\" x₁=\"∞\" note=\"hard math\">√(x²)</∫>") == "<∫ dω=\"dx\" x₀=\"0\" x₁=\"∞\" note=\"hard math\">√(x²)</∫>"
+    @test repr("text/plain", htm"<∫ dω=\"dx\" x₀=\"0\" x₁=\"∞\" note=\"hard math\">√(x²)</∫>") == "<∫ dω=\"dx\" x₀=\"0\" x₁=\"∞\" note=\"hard math\">√&#40;x²&#41;</∫>"
 
     # Wild types have appeared!
     for val in (
@@ -52,6 +52,6 @@
     let val = "Hello world!"
         @test repr("text/plain", htm"""<span>
             Our value: $val
-        </span>""") == "<span> Our value: $val</span>"
+        </span>""") == "<span> Our value: Hello world&#33;</span>"
     end
 end

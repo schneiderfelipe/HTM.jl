@@ -10,7 +10,7 @@ function parse!(parent::Node, data::AbstractString, i::Int=firstindex(data), n::
     i > n && return parent, i
 
     if hasfinished(parent, data, i, n)
-        return parent, nextind(data, i, length(endtag(parent)))
+        return parent, nextind(data, i, length(uendtag(parent)))
     elseif data[i] == '<'
         i = nextind(data, i)
 
@@ -128,7 +128,7 @@ end
 """
 Check whether we have reached the end of the current tag.
 """
-hasfinished(parent::Node, data::AbstractString, i::Int=firstindex(data), n::Int=lastindex(data)) = startswith(data[i:n], endtag(parent))
+hasfinished(parent::Node, data::AbstractString, i::Int=firstindex(data), n::Int=lastindex(data)) = startswith(data[i:n], uendtag(parent))
 hasfinished(parent::Node{:dummy}, data::AbstractString, i::Int=firstindex(data), n::Int=lastindex(data)) = false
 
 """

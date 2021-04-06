@@ -30,10 +30,16 @@
     @test htm"<span attr=three>three</span>" == JSX.Node{:span}(["three"], [:attr => "three"])
     @test htm"<span attr=\"three\">\"three\"</span>" == JSX.Node{:span}(["\"three\""], [:attr => "three"])
 
-    for value in (false, 1, 2.0, "three", "\"three\"")
+    for value in (false, 1, 2.0, "three")
         h = htm"<span attr=$value>$value</span>"
         @test h == JSX.Node{:span}([value], [:attr => value])
         @test repr("text/html", h) == "<span attr=\"$value\">$value</span>"
+    end
+
+    let value = "\"three\""
+        h = htm"<span attr=$value>$value</span>"
+        @test h == JSX.Node{:span}([value], [:attr => value])
+        @test repr("text/html", h) == "<span attr=\"&#34;three&#34;\">&#34;three&#34;</span>"
     end
 
     # Some other exotic attributes
