@@ -3,7 +3,7 @@ HTML parsing on steroids!
 
 > It's basically a tree traversal!
 """
-module JSX
+module HyperscriptLiteral
 
 export @htm_str
 

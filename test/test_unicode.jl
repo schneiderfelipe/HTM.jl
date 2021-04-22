@@ -3,11 +3,11 @@
     @test htm"""
         <olá atenção="qualé mané" caça="com gato em samba canção">
             Não se faça de pamonha meu irmão!
-        </olá>""" == JSX.Node{:olá}(
+        </olá>""" == HyperscriptLiteral.Node{:olá}(
             [" Não se faça de pamonha meu irmão! "],
             [:atenção => "qualé mané", :caça => "com gato em samba canção"],
         )
-    @test htm"<∫ dω=\"dx\" x₀=\"0\" x₁=\"∞\" note=\"hard math\">√(x²)</∫>" == JSX.Node{:∫}(
+    @test htm"<∫ dω=\"dx\" x₀=\"0\" x₁=\"∞\" note=\"hard math\">√(x²)</∫>" == HyperscriptLiteral.Node{:∫}(
         ["√(x²)"],
         [:dω => "dx", :x₀ => "0", :x₁ => "∞", :note => "hard math"],
     )

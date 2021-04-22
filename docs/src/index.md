@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = JSX
+CurrentModule = HyperscriptLiteral
 ```
 
-# JSX
+# HyperscriptLiteral
 
-Documentation for [JSX](https://github.com/schneiderfelipe/JSX.jl).
+Documentation for [HyperscriptLiteral](https://github.com/schneiderfelipe/HyperscriptLiteral.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [JSX]
+Modules = [HyperscriptLiteral]
 ```

@@ -1,24 +1,24 @@
 @testset "Node interface" begin
-    comment = JSX.Node(:comment)
-    div = JSX.Node{:div}([comment], [:class => "container"])
-    dummy = JSX.Node{:dummy}([comment, div])
+    comment = HyperscriptLiteral.Node(:comment)
+    div = HyperscriptLiteral.Node{:div}([comment], [:class => "container"])
+    dummy = HyperscriptLiteral.Node{:dummy}([comment, div])
 
-    @test JSX.tag(comment) == "comment"
-    @test JSX.tag(div) == "div"
-    @test JSX.tag(dummy) == "dummy"
+    @test HyperscriptLiteral.tag(comment) == "comment"
+    @test HyperscriptLiteral.tag(div) == "div"
+    @test HyperscriptLiteral.tag(dummy) == "dummy"
 
-    @test JSX.children(comment) == []
-    @test JSX.children(div) == [comment]
-    @test JSX.children(dummy) == [comment, div]
+    @test HyperscriptLiteral.children(comment) == []
+    @test HyperscriptLiteral.children(div) == [comment]
+    @test HyperscriptLiteral.children(dummy) == [comment, div]
 
-    @test JSX.attrs(comment) == []
-    @test JSX.attrs(div) == [:class => "container"]
-    @test JSX.attrs(div, String) == ["class" => "container"]
-    @test JSX.attrs(dummy) == []
+    @test HyperscriptLiteral.attrs(comment) == []
+    @test HyperscriptLiteral.attrs(div) == [:class => "container"]
+    @test HyperscriptLiteral.attrs(div, String) == ["class" => "container"]
+    @test HyperscriptLiteral.attrs(dummy) == []
 
-    @test JSX.iscommon(comment) === false
-    @test JSX.iscommon(div) === true
-    @test JSX.iscommon(dummy) === false
+    @test HyperscriptLiteral.iscommon(comment) === false
+    @test HyperscriptLiteral.iscommon(div) === true
+    @test HyperscriptLiteral.iscommon(dummy) === false
 
-    @test length(JSX.commontags) == 110
+    @test length(HyperscriptLiteral.commontags) == 110
 end

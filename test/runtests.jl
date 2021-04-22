@@ -1,9 +1,9 @@
-using JSX
+using HyperscriptLiteral
 using Test
 
 using Markdown
 
-@testset "JSX.jl" begin
+@testset "HyperscriptLiteral.jl" begin
     # Who doesn't love hand-made, artisanal tests?
 
     include("test_node.jl")

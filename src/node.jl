@@ -38,7 +38,7 @@ function toexpr(node::Node{:dummy}, ::NodeContext)
 end
 function toexpr(node::Node{:comment}, ::NodeContext)
     return :(
-        JSX.Node{:comment}(
+        HyperscriptLiteral.Node{:comment}(
             $(toexpr(children(node), NodeContext())),
         )
     )
@@ -49,7 +49,7 @@ Create a generic expression for a branch node.
 """
 function toexpr(node::Node, ::BranchNodeContext)
     return :(
-        JSX.Node{
+        HyperscriptLiteral.Node{
                 Symbol($(toexpr(tag(node), TagContext())))
             }(
             $(toexpr(children(node), NodeContext())),
@@ -63,7 +63,7 @@ Create a generic expression for a leaf node.
 """
 function toexpr(node::Node, ::LeafCommonNodeContext)
     return :(
-        JSX.Node{
+        HyperscriptLiteral.Node{
                 Symbol($(toexpr(tag(node), TagContext())))
             }(
             attrs=$(toexpr(attrs(node, String), AttributeContext())),
@@ -84,12 +84,12 @@ Create a generic expression for a component node.
 function toexpr(node::Node, ::ComponentNodeContext)
     # Components have to be wrapped in dummy Nodes so that we always return Nodes, even after component evaluation
     if isempty(attrs(node))
-        return :(JSX.Node{:dummy}(
+        return :(HyperscriptLiteral.Node{:dummy}(
                 [$(Symbol(toexpr(tag(node), TagContext())))()]
             )
         )
     end
-    return :(JSX.Node{:dummy}(
+    return :(HyperscriptLiteral.Node{:dummy}(
             [$(Symbol(toexpr(tag(node), TagContext())))(; map(
                 attr -> Symbol(first(attr)) => last(attr),
                 $(toexpr(attrs(node, String), AttributeContext()))

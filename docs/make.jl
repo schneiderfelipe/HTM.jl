@@ -1,16 +1,16 @@
-using JSX
+using HyperscriptLiteral
 using Documenter
 
-DocMeta.setdocmeta!(JSX, :DocTestSetup, :(using JSX); recursive=true)
+DocMeta.setdocmeta!(HyperscriptLiteral, :DocTestSetup, :(using HyperscriptLiteral); recursive=true)
 
 makedocs(;
-    modules=[JSX],
+    modules=[HyperscriptLiteral],
     authors="Felipe S. S. Schneider <schneider.felipe@posgrad.ufsc.br> and contributors",
-    repo="https://github.com/schneiderfelipe/JSX.jl/blob/{commit}{path}#{line}",
-    sitename="JSX.jl",
+    repo="https://github.com/schneiderfelipe/HyperscriptLiteral.jl/blob/{commit}{path}#{line}",
+    sitename="HyperscriptLiteral.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://schneiderfelipe.github.io/JSX.jl",
+        canonical="https://schneiderfelipe.github.io/HyperscriptLiteral.jl",
         assets=String[],
     ),
     pages=[
@@ -19,5 +19,5 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/schneiderfelipe/JSX.jl",
+    repo="github.com/schneiderfelipe/HyperscriptLiteral.jl",
 )
