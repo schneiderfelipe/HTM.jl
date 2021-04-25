@@ -30,12 +30,6 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
     end
 
     @testset "htl" begin
-        # From https://observablehq.com/@observablehq/htl
-        @test htm"<em>I'm an element!</em>" |> render == "<em>I&#39;m an element&#33;</em>"
-        @test htm"I'm simply text." == "I'm simply text."
-        @test isnothing(htm"")
-
-        # TODO: This differs from HTL. Document this.
         let fragment = htm"I'm a <em>document fragment</em>."
             @test fragment == ["I'm a ", htm"<em>document fragment</em>", "."]
 
@@ -44,31 +38,16 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
             @test htm"<span>$(fragment)</span>" == interp
         end
 
-        let fragment = htm"Look, Ma, $(\"<em>automatic escaping</em>\")!"
-            @test fragment == ["Look, Ma, ", "<em>automatic escaping</em>", "!"]
-
-            interp = htm"<span>$fragment</span>"
-            @test interp |> render == "<span>Look, Ma, &#60;em&#62;automatic escaping&#60;/em&#62;&#33;</span>"
-            @test htm"<span>$(fragment)</span>" == interp
-        end
-
-        @test htm"<font color=$(\"red\")>This text has color.</font>" |> render == "<font color=\"red\">This text has color.</font>"
-
-        @test_skip htm"<script>$(\"</script>\")</script>"  # would throw
-
-        @test htm"""<span style="background: $("yellow; font-style: italic");">It's yellow (and italic).</span>""" |> render == "<span style=\"background: yellow; font-style: italic;\">It&#39;s yellow &#40;and italic&#41;.</span>"
+        @test_skip htm"<script>$(\"</script>\")</script>"  # BUG: should throw
 
         # TODO: this might be useful in the future, especially with JSExpr.jl.
         @test_skip htm"<button onclick=$(_ -> clicks += 1)>click me</button>" == "<button onclick=$(_ -> clicks += 1)>click me</button>"
-
-        @test htm"<button disabled=$(true)>Can't click me</button>" |> render == "<button disabled>Can&#39;t click me</button>"
 
         enabledbutton = htm"<button disabled=$(false)>Can click me</button>"
         @test enabledbutton |> render == "<button>Can click me</button>"
         @test htm"<button disabled=$(nothing)>Can click me</button>" == enabledbutton
 
         @test htm"There's no $(nothing) here." == ["There's no ", nothing, " here."]
-        @test htm"$(htm\"\")" == nothing
 
         let props = Dict("style" => Dict("background" => "yellow", "font-weight" => "bold"))
             @test_broken htm"<span $(props)>whoa</span>" == htm"<span style=$(props[\"style\"])>whoa</span>"

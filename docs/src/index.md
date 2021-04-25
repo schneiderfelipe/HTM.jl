@@ -1,14 +1,5 @@
-```@meta
-CurrentModule = HyperscriptLiteral
-```
+```@eval
+using Markdown
 
-# HyperscriptLiteral
-
-Documentation for [HyperscriptLiteral](https://github.com/schneiderfelipe/HyperscriptLiteral.jl).
-
-```@index
-```
-
-```@autodocs
-Modules = [HyperscriptLiteral]
+Markdown.parse_file("../../README.md")
 ```

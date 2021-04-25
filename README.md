@@ -1,4 +1,4 @@
-# HyperscriptLiteral.jl
+# [HyperscriptLiteral.jl](https://github.com/schneiderfelipe/HyperscriptLiteral.jl)
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://schneiderfelipe.github.io/HyperscriptLiteral.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://schneiderfelipe.github.io/HyperscriptLiteral.jl/dev)
@@ -7,20 +7,29 @@
 
 A juicy way of writing HTML in Julia. 🍍
 
-```julia
-using HyperscriptLiteral
+```jldoctest
+julia> using HyperscriptLiteral
 
-sayhi(whom) = htm"<title>Hello, $(whom)</title>"
+julia> whom = "🌍!";
 
-sayhi("world!")
-# => <title>Hello, world&#33;</title>
+julia> htm"<h1>Hello, $(whom)</h1>"
+<h1>Hello, 🌍&#33;</h1>
 ```
 
 HyperscriptLiteral.jl parses HTML into [Hyperscript.jl](https://github.com/yurivish/Hyperscript.jl) objects.
 
-## Related packages
+Please help us improve by sharing your feedback. 🙏
+TODO: link to issues
 
-See [HypertextLiteral.jl](https://github.com/MechanicalRabbit/HypertextLiteral.jl) for a related package.
+## Installation
+
+HyperscriptLiteral.jl is open-source, small (<250 SLOCs), has no dependencies
+(TODO: currently not true), and can be installed using the Julia package manager.
+From the Julia REPL, type `]` to enter the Pkg REPL mode and run
+
+```julia
+pkg> add HyperscriptLiteral  # TODO: register package
+```
 
 ## Roadmap
 
@@ -29,5 +38,5 @@ See [HypertextLiteral.jl](https://github.com/MechanicalRabbit/HypertextLiteral.j
 - [ ] Full (Julian) support of [developit/htm](https://github.com/developit/htm) (when it can be compatible with Hyperscript.jl).
 - [ ] Hyperscript.jl as sole dependency.
   - [ ] Support all features of Hyperscript.jl.
-  - [ ] Compare with Hyperscript.jl in the documentation.
 - [ ] `@htm_str` macro.
+  - [ ] Too similar to `@html_str`, change to something else.
