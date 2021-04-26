@@ -116,7 +116,10 @@ Parse a `Tag` object.
 function parsetag(io::IO)
     type = parsetagtype(io)
     props = parseprops(io)
-    read(io, Char) === '/' && return Tag(type, props, [])
+    if read(io, Char) === '/'
+        skipchars(isequal('>'), io)
+        return Tag(type, props, [])
+    end
 
     endtag = "</$(type)>"
     children = parseelems(io -> !startswith(io, endtag), io)
@@ -182,7 +185,7 @@ function parsequotedvalue(io::IO)
     skipchars(isequal(q), io)
     return pieces
 end
-parseunquotedvalue(io::IO) = startswith(io, '$') ? parseinterp(io) : readuntil(c -> isspace(c) || c === '>', io)
+parseunquotedvalue(io::IO) = startswith(io, '$') ? parseinterp(io) : readuntil(c -> isspace(c) || c ∈ ('>', '/'), io)
 
 raw"""
     parseinterp(io::IO)

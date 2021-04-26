@@ -13,7 +13,7 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
         @test create_element("div", Dict("class" => "active")) |> render == "<div class=\"active\"></div>"
         @test create_element("div", Dict("class" => "active"), "Hi!") |> render == "<div class=\"active\">Hi&#33;</div>"
         @test create_element("div", Dict("class" => "active"), "Hi ", "there!") |> render == "<div class=\"active\">Hi there&#33;</div>"
-        @test create_element("circle", Dict("fill" => "red")) |>  render == "<circle fill=\"red\" />"
+        @test create_element("circle", Dict("fill" => "red")) |> render == "<circle fill=\"red\" />"
     end
 
     @testset "HTML spec." begin
@@ -99,5 +99,10 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
         let tagtype = "button"
             @test htm"<$(tagtype)>Does this work?</$(tagtype)>" |> render == "<button>Does this work?</button>"
         end
+    end
+
+    @testset "Stress tests" begin
+        @test htm"<circle fill=red/>" |> render == "<circle fill=\"red\" />"
+        @test htm"<circle fill=red />" == htm"<circle fill=red/>"
     end
 end
