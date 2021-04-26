@@ -13,6 +13,8 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
             interp = htm"<span>$fragment</span>"
             @test interp |> render == "<span>I&#39;m a <em>document fragment</em>.</span>"
             @test htm"<span>$(fragment)</span>" == interp
+
+            @test htm"<span>$fragment$fragment</span>" == htm"<span>$(fragment)$(fragment)</span>"
         end
 
         @test_skip htm"<script>$(\"</script>\")</script>"  # BUG: should throw
@@ -28,8 +30,13 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
 
         @test htm"There's no $(nothing) here." == ["There's no ", nothing, " here."]
 
+        let props = Dict("class" => "active")
+            @test htm"<span $props>whoa</span>" == htm"<span class=active>whoa</span>"
+            @test htm"<span $(props)>whoa</span>" == htm"<span $props>whoa</span>"
+        end
+
         let props = Dict("style" => Dict("background" => "yellow", "font-weight" => "bold"))
-            @test_broken htm"<span $(props)>whoa</span>" == htm"<span style=$(props[\"style\"])>whoa</span>"
+            @test htm"<span $(props)>whoa</span>" == htm"<span style=$(props[\"style\"])>whoa</span>"
             @test_broken htm"<span style=$(props[\"style\"])>whoa</span>" == htm"<span style=\"background: yellow; font-weight: bold;\">whoa</span>"
         end
 
@@ -94,16 +101,16 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
     end
 
     @testset "Tag (IR)" begin
-        @test parsetag(IOBuffer("<div/>")) == Tag("div", Dict(), [])
-        @test parsetag(IOBuffer("<div>Hi!</div>")) == Tag("div", Dict(), ["Hi!"])
-        @test parsetag(IOBuffer("<div class=active/>")) == Tag("div", Dict("class" => "active"), [])
-        @test parsetag(IOBuffer("<div class=active>Hi!</div>")) == Tag("div", Dict("class" => "active"), ["Hi!"])
-        @test parsetag(IOBuffer("<div class=active>Hi there!</div>")) == Tag("div", Dict("class" => "active"), ["Hi there!"])
+        @test parsetag(IOBuffer("<div/>")) == Tag("div", Dict(), [], [])
+        @test parsetag(IOBuffer("<div>Hi!</div>")) == Tag("div", Dict(), [], ["Hi!"])
+        @test parsetag(IOBuffer("<div class=active/>")) == Tag("div", Dict("class" => "active"), [], [])
+        @test parsetag(IOBuffer("<div class=active>Hi!</div>")) == Tag("div", Dict("class" => "active"), [], ["Hi!"])
+        @test parsetag(IOBuffer("<div class=active>Hi there!</div>")) == Tag("div", Dict("class" => "active"), [], ["Hi there!"])
 
-        @test parsetag(IOBuffer("<button class=active disabled/>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), [])
-        @test parsetag(IOBuffer("<button class=active disabled>Click me</button>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), ["Click me"])
+        @test parsetag(IOBuffer("<button class=active disabled/>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), [], [])
+        @test parsetag(IOBuffer("<button class=active disabled>Click me</button>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), [], ["Click me"])
 
-        @test parsetag(IOBuffer("<circle fill=red/>")) == Tag("circle", Dict("fill" => "red"), [])
+        @test parsetag(IOBuffer("<circle fill=red/>")) == Tag("circle", Dict("fill" => "red"), [], [])
     end
 
     @testset "Stress tests" begin

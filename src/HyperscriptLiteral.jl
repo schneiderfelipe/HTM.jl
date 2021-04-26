@@ -30,6 +30,7 @@ Compile time internal representation of an HTML tag.
 struct Tag
     type
     props
+    promises
     children
 end
 Base.:(==)(a::Tag, b::Tag) = a.type == b.type && a.props == b.props && a.children == b.children
@@ -40,10 +41,14 @@ macro htm_str(s)
 end
 
 toexpr(x) = x
-toexpr(x::Tag) = (args = map(toexpr, (x.type, x.props, x.children)); :(create_element($(args...))))
+function toexpr(x::Tag)
+    type, props, children = toexpr.((x.type, x.props, x.children))
+    !isempty(x.promises) && (props = :(merge($(props), $(toexpr(x.promises))...)))
+    return :(create_element($(type), $(process)($(props)), $(children)))
+end
 toexpr(s::AbstractString) = startswith(s, '$') ? Meta.parse(s[nextind(s, begin):end]) : s
 toexpr(xs::AbstractVector) = (xs = map(toexpr, xs); :([$(xs...)]))
-toexpr(d::AbstractDict) = (d = :(Dict($(toexpr(collect(d))))); :($(process)($(d))))
+toexpr(d::AbstractDict) = :(Dict($(toexpr(collect(d)))))
 toexpr(p::Pair) = :($(toexpr(first(p))) => $(toexpr(last(p))))
 
 process(x) = x
@@ -103,9 +108,8 @@ Parse a single HTML element.
 """
 function parseelem(io::IO)
     # TODO: revisit this implementation after.
-    c = peek(io, Char)
-    c === '<' && return parsetag(io)
-    return c === '$' ? parseinterp(io) : readuntil(c -> c ∈ ('<', '$'), io)
+    startswith(io, '<') && return parsetag(io)
+    return startswith(io, '$') ? parseinterp(io) : readuntil(c -> c ∈ ('<', '$'), io)
 end
 
 """
@@ -115,10 +119,10 @@ Parse a `Tag` object.
 """
 function parsetag(io::IO)
     type = parsetagtype(io)
-    props = parseprops(io)
+    props, promises = parseprops(io)
     if read(io, Char) === '/'
         skipchars(isequal('>'), io)
-        return Tag(type, props, [])
+        return Tag(type, props, promises, [])
     end
 
     endtag = "</$(type)>"
@@ -126,7 +130,7 @@ function parsetag(io::IO)
 
     # TODO: might use a skipuntil
     skip(io, length(endtag))
-    return Tag(type, props, children)
+    return Tag(type, props, promises, children)
 end
 
 """
@@ -143,23 +147,32 @@ Parse HTML properties of a tag.
 """
 function parseprops(io::IO)
     # TODO: revisit this implementation after.
-    props = Dict{String, Any}()
-    parseprops!(io, props)
-    return props
+    props, promises = Dict{String, Any}(), []
+    parseprops!(io, props, promises)
+    return props, promises
 end
-function parseprops!(io::IO, props::AbstractDict)
+function parseprops!(io::IO, props::AbstractDict, promises::AbstractVector)
     # TODO: revisit this implementation after.
     while !eof(io)
         skipchars(isspace, io)
         startswith(io, ('>', '/')) && break
-
-        key = parsekey(io)
-        eof(io) && (props[key] = nothing; break)
-
-        c = read(io, Char)
-        props[key] = c === '=' ? parsevalue(io) : nothing
-        c ∈ ('>', '/') && (skip(io, -1); break)
+        startswith(io, '$') ? push!(promises, parseinterp(io)) : parseprop!(io, props)
     end
+end
+
+"""
+    parseprop!(io::IO, props::AbstractDict)
+
+Parse a single HTML property of a tag.
+"""
+function parseprop!(io::IO, props::AbstractDict)
+    # TODO: revisit this implementation after.
+    key = parsekey(io)
+    eof(io) && (props[key] = nothing; return)
+
+    c = read(io, Char)
+    props[key] = c === '=' ? parsevalue(io) : nothing
+    c ∈ ('>', '/') && skip(io, -1)
 end
 
 """
@@ -177,7 +190,6 @@ Parse an HTML property value.
 parsevalue(io::IO) = (skipchars(isspace, io); startswith(io, ('"', '\'')) ? parsequotedvalue(io) : parseunquotedvalue(io))
 function parsequotedvalue(io::IO)
     q = read(io, Char)
-
     pieces = []
     while !eof(io) && !startswith(io, q)
         push!(pieces, startswith(io, '$') ? parseinterp(io) : readuntil(c -> c ∈ (q, '$'), io))
@@ -213,7 +225,7 @@ function parseinterp(io::IO)
             write(buf, c)
         end
     else
-        write(buf, readuntil(c -> isspace(c) || c === '<', io))
+        write(buf, readuntil(c -> isspace(c) || c ∈ ('<', '>', '$'), io))
     end
     return String(take!(buf))
 end
