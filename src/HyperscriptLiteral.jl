@@ -8,7 +8,7 @@ using Hyperscript: AbstractNode, Node, DEFAULT_HTMLSVG_CONTEXT, context, tag, ch
 export @htm_str
 
 macro htm_str(html)
-    htm = parse(html; interp=true)
+    htm = parse(html)
     esc(toexpr(htm))
 end
 
@@ -54,13 +54,13 @@ create_element(type::AbstractString, props::AbstractDict, children...) = Node(DE
 
 Parse HTML.
 """
-function parse(io::IO; interp::Bool=false)
-    elems = parseelems(io; interp=interp)
+function parse(io::IO)
+    elems = parseelems(io)
     isempty(elems) && return nothing
     length(elems) == 1 && return only(elems)
     return elems
 end
-parse(html::AbstractString; interp::Bool=false) = parse(IOBuffer(html); interp=interp)
+parse(html::AbstractString) = parse(IOBuffer(html))
 
 # --- HTML specification ---
 
@@ -72,15 +72,15 @@ Parse HTML elements.
 This function is the entry point for an implementation of a subset of the
 [HTML standard](https://html.spec.whatwg.org/multipage/parsing.html#tokenization).
 """
-parseelems(io::IO; interp::Bool=false) = parseelems(io -> true, io; interp=interp)
-function parseelems(predicate, io::IO; interp::Bool=false)
+parseelems(io::IO) = parseelems(io -> true, io)
+function parseelems(predicate, io::IO)
     elems = Any[]
-    parseelems!(predicate, io, elems; interp=interp)
+    parseelems!(predicate, io, elems)
     return elems
 end
-function parseelems!(predicate, io::IO, elems::AbstractVector; interp::Bool=false)
+function parseelems!(predicate, io::IO, elems::AbstractVector)
     while !eof(io) && predicate(io)
-        push!(elems, parseelem(io; interp=interp))
+        push!(elems, parseelem(io))
     end
 end
 
@@ -89,12 +89,11 @@ end
 
 Parse a single HTML element.
 """
-function parseelem(io::IO; interp::Bool=false)
+function parseelem(io::IO)
     # TODO: revisit this implementation after.
     c = peek(io, Char)
-    c === '<' && return parsetag(io; interp=interp)
-    interp && return c === '$' ? parseinterp(io; interp=interp) : readwhile(c -> c ∉ ('$', '<'), io)
-    return readwhile(!isequal('<'), io)
+    c === '<' && return parsetag(io)
+    return c === '$' ? parseinterp(io) : readwhile(c -> c ∉ ('$', '<'), io)
 end
 
 """
@@ -102,13 +101,13 @@ end
 
 Parse an HTML tag.
 """
-function parsetag(io::IO; interp::Bool=false)
-    type = parsetagtype(io; interp=interp)
-    props = parseprops(io; interp=interp)
+function parsetag(io::IO)
+    type = parsetagtype(io)
+    props = parseprops(io)
     read(io, Char) === '/' && return create_element(type, props)
 
     endtag = "</$(type)>"
-    children = parseelems(io; interp=interp) do io
+    children = parseelems(io) do io
         !beginswith(io, endtag)
     end
     skip(io, length(endtag))
@@ -120,7 +119,7 @@ end
 
 Parse an HTML tag name.
 """
-function parsetagtype(io::IO; interp::Bool=false)
+function parsetagtype(io::IO)
     skipchars(isequal('<'), io)
     return readwhile(io) do c
         !isspace(c) && c ∉ ('/', '>')
@@ -132,22 +131,22 @@ end
 
 Parse HTML props/attributes of a tag.
 """
-function parseprops(io::IO; interp::Bool=false)
+function parseprops(io::IO)
     props = Dict{String, Any}()
-    parseprops!(io, props; interp=interp)
+    parseprops!(io, props)
     return props
 end
-function parseprops!(io::IO, props::AbstractDict; interp::Bool=false)
+function parseprops!(io::IO, props::AbstractDict)
     # TODO: revisit this implementation after.
     while !eof(io)
         skipchars(isspace, io)
         peek(io, Char) ∈ ('/', '>') && break
 
-        key = parsekey(io; interp=interp)
+        key = parsekey(io)
         eof(io) && (props[key] = nothing; break)
 
         c = read(io, Char)
-        props[key] = c === '=' ? parsevalue(io; interp=interp) : nothing
+        props[key] = c === '=' ? parsevalue(io) : nothing
         c ∈ ('/', '>') && (skip(io, -1); break)
     end
 end
@@ -157,7 +156,7 @@ end
 
 Parse an HTML prop/attribute key.
 """
-function parsekey(io::IO; interp::Bool=false)
+function parsekey(io::IO)
     return readwhile(io) do c
         !isspace(c) && c ∉ ('/', '>', '=')
     end
@@ -168,29 +167,28 @@ end
 
 Parse an HTML prop/attribute value.
 """
-function parsevalue(io::IO; interp::Bool=false)
+function parsevalue(io::IO)
     skipchars(isspace, io)
-    return peek(io, Char) ∈ ('"', '\'') ? parsequotedvalue(io; interp=interp) : parseunquotedvalue(io; interp=interp)
+    return peek(io, Char) ∈ ('"', '\'') ? parsequotedvalue(io) : parseunquotedvalue(io)
 end
-function parsequotedvalue(io::IO; interp::Bool=false)
+function parsequotedvalue(io::IO)
     q = read(io, Char)
-    !interp && return readuntil(io, q)
 
     pieces = Any[]
     while !eof(io) && peek(io, Char) != q
-        push!(pieces, peek(io, Char) === '$' ? parseinterp(io; interp=interp) : readwhile(c -> c ∉ ('$', q), io))
+        push!(pieces, peek(io, Char) === '$' ? parseinterp(io) : readwhile(c -> c ∉ ('$', q), io))
     end
     skipchars(isequal(q), io)
     return pieces
 end
-parseunquotedvalue(io::IO; interp::Bool=false) = (interp && peek(io, Char) === '$') ? parseinterp(io; interp=interp) : readwhile(c ->  !isspace(c) && c != '>', io)
+parseunquotedvalue(io::IO) = peek(io, Char) === '$' ? parseinterp(io) : readwhile(c ->  !isspace(c) && c != '>', io)
 
 raw"""
     parseinterp(io::IO)
 
 Parse an interpolation as string, including `$`.
 """
-function parseinterp(io::IO; interp::Bool=false)
+function parseinterp(io::IO)
     buffer = IOBuffer()
     write(buffer, read(io, Char))
     (eof(io) || isspace(peek(io, Char))) && return '$'  # frustrated interp returns `Char`
