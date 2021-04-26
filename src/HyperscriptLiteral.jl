@@ -183,6 +183,7 @@ function parsequotedvalue(io::IO)
         push!(pieces, startswith(io, '$') ? parseinterp(io) : readuntil(c -> c ∈ (q, '$'), io))
     end
     skipchars(isequal(q), io)
+    length(pieces) == 1 && return only(pieces)
     return pieces
 end
 parseunquotedvalue(io::IO) = startswith(io, '$') ? parseinterp(io) : readuntil(c -> isspace(c) || c ∈ ('>', '/'), io)

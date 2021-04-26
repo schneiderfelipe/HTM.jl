@@ -1,6 +1,5 @@
 using HyperscriptLiteral
-using HyperscriptLiteral: parsevalue, parseprops, parsetag
-using HyperscriptLiteral: Tag
+using HyperscriptLiteral: parsetag, Tag
 using Hyperscript: render
 using Test
 
@@ -13,24 +12,25 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
         @test create_element("div", Dict("class" => "active")) |> render == "<div class=\"active\"></div>"
         @test create_element("div", Dict("class" => "active"), "Hi!") |> render == "<div class=\"active\">Hi&#33;</div>"
         @test create_element("div", Dict("class" => "active"), "Hi ", "there!") |> render == "<div class=\"active\">Hi there&#33;</div>"
+
         @test create_element("circle", Dict("fill" => "red")) |> render == "<circle fill=\"red\" />"
-    end
-
-    @testset "HTML spec." begin
-        @test parsetag(IOBuffer("<a/>")) == Tag("a", Dict(), [])
-        @test parsetag(IOBuffer("<a>b</a>")) == Tag("a", Dict(), ["b"])
-        @test parsetag(IOBuffer("<a b=c d/>")) == Tag("a", Dict("b" => "c", "d" => nothing), [])
-        @test parsetag(IOBuffer("<a b=c d>e</a>")) == Tag("a", Dict("b" => "c", "d" => nothing), ["e"])
-
-        @test parsetag(IOBuffer("<a></a>")) == parsetag(IOBuffer("<a/>"))
-        @test parsetag(IOBuffer("<a />")) == parsetag(IOBuffer("<a/>"))
-        @test parsetag(IOBuffer("<a b=c d />")) == parsetag(IOBuffer("<a b=c d/>"))
 
         # TODO: make this work, but suggest changes in Hyperscript.jl.
         @test htm"<span style=$(Dict(\"background\" => \"yellow\"))>It's all yellow!</span>" |> render == create_element("span", Dict("style" => Dict("background" => "yellow")), "It's all yellow!") |> render
     end
 
-    @testset "htl" begin
+    @testset "Tag (IR)" begin
+        @test parsetag(IOBuffer("<div/>")) == Tag("div", Dict(), [])
+        @test parsetag(IOBuffer("<div>Hi!</div>")) == Tag("div", Dict(), ["Hi!"])
+        @test parsetag(IOBuffer("<div class=active/>")) == Tag("div", Dict("class" => "active"), [])
+        @test parsetag(IOBuffer("<div class=active>Hi!</div>")) == Tag("div", Dict("class" => "active"), ["Hi!"])
+        @test parsetag(IOBuffer("<div class=active>Hi there!</div>")) == Tag("div", Dict("class" => "active"), ["Hi there!"])
+
+        @test parsetag(IOBuffer("<button class=active disabled/>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), [])
+        @test parsetag(IOBuffer("<button class=active disabled>Click me</button>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), ["Click me"])
+    end
+
+    @testset "Features" begin
         let fragment = htm"I'm a <em>document fragment</em>."
             @test fragment == ["I'm a ", htm"<em>document fragment</em>", "."]
 
@@ -102,7 +102,33 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
     end
 
     @testset "Stress tests" begin
-        @test htm"<circle fill=red/>" |> render == "<circle fill=\"red\" />"
-        @test htm"<circle fill=red />" == htm"<circle fill=red/>"
+        emptydiv = parsetag(IOBuffer("<div/>"))
+        activeemptydiv = parsetag(IOBuffer("<div class=active/>"))
+        disabledactiveemptydiv = parsetag(IOBuffer("<div class=active disabled/>"))
+
+        let c = "Hi there!"
+            nonemptydiv = parsetag(IOBuffer("<div>$(c)</div>"))
+            activenonemptydiv = parsetag(IOBuffer("<div class=active>$(c)</div>"))
+            disabledactivenonemptydiv = parsetag(IOBuffer("<div class=active disabled>$(c)</div>"))
+
+            @testset "Separator \"$s\"" for s in ("", ' ', '\n', '\t', "  ")
+                @test parsetag(IOBuffer("<div$(s)/>")) == emptydiv
+
+                @test parsetag(IOBuffer("<div$(s)></div>")) == emptydiv
+
+                @test parsetag(IOBuffer("<div$(s)>$(c)</div>")) == nonemptydiv
+
+                @testset "Quote \"$q\"" for q in ("", '"', '\'')
+                    @test parsetag(IOBuffer("<div class=$(q)active$(q)$(s)/>")) == activeemptydiv
+                    @test parsetag(IOBuffer("<div class=$(q)active$(q) disabled$(s)/>")) == disabledactiveemptydiv
+
+                    @test parsetag(IOBuffer("<div class=$(q)active$(q)$(s)></div>")) == activeemptydiv
+                    @test parsetag(IOBuffer("<div class=$(q)active$(q) disabled$(s)></div>")) == disabledactiveemptydiv
+
+                    @test parsetag(IOBuffer("<div class=$(q)active$(q)$(s)>$(c)</div>")) == activenonemptydiv
+                    @test parsetag(IOBuffer("<div class=$(q)active$(q) disabled$(s)>$(c)</div>")) == disabledactivenonemptydiv
+                end
+            end
+        end
     end
 end
