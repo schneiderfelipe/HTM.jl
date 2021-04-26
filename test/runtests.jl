@@ -43,6 +43,8 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
         # TODO: this might be useful in the future, especially with JSExpr.jl.
         @test_skip htm"<button onclick=$(_ -> clicks += 1)>click me</button>" == "<button onclick=$(_ -> clicks += 1)>click me</button>"
 
+        @test htm"<button disabled=$(true)>Can't click me</button>" |> render == "<button disabled>Can&#39;t click me</button>"
+
         enabledbutton = htm"<button disabled=$(false)>Can click me</button>"
         @test enabledbutton |> render == "<button>Can click me</button>"
         @test htm"<button disabled=$(nothing)>Can click me</button>" == enabledbutton
