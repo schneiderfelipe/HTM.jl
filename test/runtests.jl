@@ -6,30 +6,6 @@ using Test
 simplerender(x) = replace(render(x), r"\s+" => ' ')
 
 @testset "HyperscriptLiteral.jl" begin
-    @testset "create_element" begin
-        @test create_element("div") |> render == "<div></div>"
-        @test create_element("div", "Hi!") |> render == "<div>Hi&#33;</div>"
-        @test create_element("div", Dict("class" => "active")) |> render == "<div class=\"active\"></div>"
-        @test create_element("div", Dict("class" => "active"), "Hi!") |> render == "<div class=\"active\">Hi&#33;</div>"
-        @test create_element("div", Dict("class" => "active"), "Hi ", "there!") |> render == "<div class=\"active\">Hi there&#33;</div>"
-
-        @test create_element("circle", Dict("fill" => "red")) |> render == "<circle fill=\"red\" />"
-
-        # TODO: make this work, but suggest changes in Hyperscript.jl.
-        @test htm"<span style=$(Dict(\"background\" => \"yellow\"))>It's all yellow!</span>" |> render == create_element("span", Dict("style" => Dict("background" => "yellow")), "It's all yellow!") |> render
-    end
-
-    @testset "Tag (IR)" begin
-        @test parsetag(IOBuffer("<div/>")) == Tag("div", Dict(), [])
-        @test parsetag(IOBuffer("<div>Hi!</div>")) == Tag("div", Dict(), ["Hi!"])
-        @test parsetag(IOBuffer("<div class=active/>")) == Tag("div", Dict("class" => "active"), [])
-        @test parsetag(IOBuffer("<div class=active>Hi!</div>")) == Tag("div", Dict("class" => "active"), ["Hi!"])
-        @test parsetag(IOBuffer("<div class=active>Hi there!</div>")) == Tag("div", Dict("class" => "active"), ["Hi there!"])
-
-        @test parsetag(IOBuffer("<button class=active disabled/>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), [])
-        @test parsetag(IOBuffer("<button class=active disabled>Click me</button>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), ["Click me"])
-    end
-
     @testset "Features" begin
         let fragment = htm"I'm a <em>document fragment</em>."
             @test fragment == ["I'm a ", htm"<em>document fragment</em>", "."]
@@ -99,6 +75,35 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
         let tagtype = "button"
             @test htm"<$(tagtype)>Does this work?</$(tagtype)>" |> render == "<button>Does this work?</button>"
         end
+
+        # TODO: make this work, but suggest changes in Hyperscript.jl.
+        @test htm"<span style=$(Dict(\"background\" => \"yellow\"))>It's all yellow!</span>" |> render == create_element("span", Dict("style" => Dict("background" => "yellow")), "It's all yellow!") |> render
+    end
+
+    @testset "create_element" begin
+        @test create_element("div") |> render == "<div></div>"
+        @test create_element("div", "Hi!") |> render == "<div>Hi&#33;</div>"
+        @test create_element("div", Dict("class" => "active")) |> render == "<div class=\"active\"></div>"
+        @test create_element("div", Dict("class" => "active"), "Hi!") |> render == "<div class=\"active\">Hi&#33;</div>"
+        @test create_element("div", Dict("class" => "active"), "Hi ", "there!") |> render == "<div class=\"active\">Hi there&#33;</div>"
+
+        @test create_element("button", Dict("class" => "active", "disabled" => nothing)) |> render == "<button class=\"active\" disabled></button>"
+        @test create_element("button", Dict("class" => "active", "disabled" => nothing), "Click me") |> render == "<button class=\"active\" disabled>Click me</button>"
+
+        @test create_element("circle", Dict("fill" => "red")) |> render == "<circle fill=\"red\" />"
+    end
+
+    @testset "Tag (IR)" begin
+        @test parsetag(IOBuffer("<div/>")) == Tag("div", Dict(), [])
+        @test parsetag(IOBuffer("<div>Hi!</div>")) == Tag("div", Dict(), ["Hi!"])
+        @test parsetag(IOBuffer("<div class=active/>")) == Tag("div", Dict("class" => "active"), [])
+        @test parsetag(IOBuffer("<div class=active>Hi!</div>")) == Tag("div", Dict("class" => "active"), ["Hi!"])
+        @test parsetag(IOBuffer("<div class=active>Hi there!</div>")) == Tag("div", Dict("class" => "active"), ["Hi there!"])
+
+        @test parsetag(IOBuffer("<button class=active disabled/>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), [])
+        @test parsetag(IOBuffer("<button class=active disabled>Click me</button>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), ["Click me"])
+
+        @test parsetag(IOBuffer("<circle fill=red/>")) == Tag("circle", Dict("fill" => "red"), [])
     end
 
     @testset "Stress tests" begin
