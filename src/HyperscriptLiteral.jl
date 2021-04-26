@@ -91,9 +91,9 @@ Parse a single HTML element.
 """
 function parseelem(io::IO)
     # TODO: revisit this implementation after.
-    c = look(io, Char)
+    c = peek(io, Char)
     c === '<' && return parsetag(io)
-    return c === '$' ? parseinterp(io) : readwhile(c -> c ∉ ('$', '<'), io)
+    return c === '$' ? parseinterp(io) : readuntil(c -> c ∈ ('<', '$'), io)
 end
 
 """
@@ -107,9 +107,8 @@ function parsetag(io::IO)
     read(io, Char) === '/' && return create_element(type, props)
 
     endtag = "</$(type)>"
-    children = parseelems(io) do io
-        !beginswith(io, endtag)
-    end
+    children = parseelems(io -> !startswith(io, endtag), io)
+
     skip(io, length(endtag))
     return create_element(type, props, children...)
 end
@@ -119,12 +118,7 @@ end
 
 Parse an HTML tag name.
 """
-function parsetagtype(io::IO)
-    skipchars(isequal('<'), io)
-    return readwhile(io) do c
-        !isspace(c) && c ∉ ('/', '>')
-    end
-end
+parsetagtype(io::IO) = (skipchars(isequal('<'), io); readuntil(c -> isspace(c) || c ∈ ('>', '/'), io))
 
 """
     parseprops(io::IO)
@@ -140,14 +134,14 @@ function parseprops!(io::IO, props::AbstractDict)
     # TODO: revisit this implementation after.
     while !eof(io)
         skipchars(isspace, io)
-        look(io, Char) ∈ ('/', '>') && break
+        startswith(io, ('>', '/')) && break
 
         key = parsekey(io)
         eof(io) && (props[key] = nothing; break)
 
         c = read(io, Char)
         props[key] = c === '=' ? parsevalue(io) : nothing
-        c ∈ ('/', '>') && (skip(io, -1); break)
+        c ∈ ('>', '/') && (skip(io, -1); break)
     end
 end
 
@@ -156,32 +150,25 @@ end
 
 Parse an HTML prop/attribute key.
 """
-function parsekey(io::IO)
-    return readwhile(io) do c
-        !isspace(c) && c ∉ ('/', '>', '=')
-    end
-end
+parsekey(io::IO) = readuntil(c -> isspace(c) || c ∈ ('=', '>', '/'), io)
 
 """
     parsevalue(io::IO)
 
 Parse an HTML prop/attribute value.
 """
-function parsevalue(io::IO)
-    skipchars(isspace, io)
-    return look(io, Char) ∈ ('"', '\'') ? parsequotedvalue(io) : parseunquotedvalue(io)
-end
+parsevalue(io::IO) = (skipchars(isspace, io); startswith(io, ('"', '\'')) ? parsequotedvalue(io) : parseunquotedvalue(io))
 function parsequotedvalue(io::IO)
     q = read(io, Char)
 
     pieces = Any[]
-    while !eof(io) && look(io, Char) != q
-        push!(pieces, look(io, Char) === '$' ? parseinterp(io) : readwhile(c -> c ∉ ('$', q), io))
+    while !eof(io) && !startswith(io, q)
+        push!(pieces, startswith(io, '$') ? parseinterp(io) : readuntil(c -> c ∈ (q, '$'), io))
     end
     skipchars(isequal(q), io)
     return pieces
 end
-parseunquotedvalue(io::IO) = look(io, Char) === '$' ? parseinterp(io) : readwhile(c ->  !isspace(c) && c != '>', io)
+parseunquotedvalue(io::IO) = startswith(io, '$') ? parseinterp(io) : readuntil(c -> isspace(c) || c == '>', io)
 
 raw"""
     parseinterp(io::IO)
@@ -189,13 +176,14 @@ raw"""
 Parse an interpolation as string, including `$`.
 """
 function parseinterp(io::IO)
-    buffer = IOBuffer()
-    write(buffer, read(io, Char))
-    (eof(io) || isspace(look(io, Char))) && return '$'  # frustrated interp returns `Char`
+    # TODO: revisit this implementation after.
+    buf = IOBuffer()
+    write(buf, read(io, Char))
+    (eof(io) || isspace(peek(io, Char))) && return '$'  # frustrated interp returns `Char`
 
-    if look(io, Char) === '('
+    if startswith(io, '(')
         count = 1
-        write(buffer, read(io, Char))
+        write(buf, read(io, Char))
 
         while count > 0
             c = read(io, Char)
@@ -204,47 +192,51 @@ function parseinterp(io::IO)
             elseif c === ')'
                 count -= 1
             end
-            write(buffer, c)
+            write(buf, c)
         end
     else
-        write(buffer, readwhile(c -> !isspace(c) && c != '<', io))
+        write(buf, readuntil(c -> isspace(c) || c == '<', io))
     end
-    return String(take!(buffer))
+    return String(take!(buf))
 end
 
 # --- Utilities ---
 # All those could be part of Julia in the future.
 
 """
-    look(io::IO, ::Type{T})
+    readuntil(predicate, io::IO)
 
-Check what is next in a `IO` object.
-"""
-look(io::IO, ::Type{T}) where T = T(peek(io))
+Read characters until matching a predicate.
 
+Based on <https://github.com/JuliaLang/julia/issues/21355#issue-221121166>.
 """
-    readwhile(predicate, io::IO)
-
-Read characters matching a predicate.
-"""
-function readwhile(predicate, io::IO)
-    buffer = IOBuffer()
-    while !eof(io) && predicate(look(io, Char))
-        write(buffer, read(io, Char))
+function Base.readuntil(predicate, io::IO)
+    buf = IOBuffer()
+    while !eof(io)
+        c = read(io, Char)
+        if predicate(c)
+            skip(io, -ncodeunits(c))
+            break
+        end
+        write(buf, c)
     end
-    return String(take!(buffer))
+    return String(take!(buf))
 end
 
 """
-    beginswith(io::IO, prefix::AbstractString)
+    startswith(io::IO, prefix::Union{AbstractString,Base.Chars})
 
-Check if an `IO` object starts with prefix.
+Check if an `IO` object starts with a prefix.
+
+Based on <https://github.com/JuliaLang/julia/issues/40616#issue-867861851>.
 """
-function beginswith(io::IO, prefix::AbstractString)
+function Base.startswith(io::IO, prefix::Union{AbstractString,Base.Chars})
     pos = position(io)
-    start = String(read(io, length(prefix)))
+    s = _getminprefix(io, prefix)
     seek(io, pos)
-    return start == prefix
+    return startswith(s, prefix)
 end
+_getminprefix(io::IO, prefix::Union{AbstractString,AbstractChar}) = String(read(io, length(prefix)))
+_getminprefix(io::IO, chars::Union{Tuple{Vararg{<:AbstractChar}},AbstractVector{<:AbstractChar},Set{<:AbstractChar}}) = _getminprefix(io, first(chars))
 
 end
