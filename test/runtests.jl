@@ -1,6 +1,5 @@
 using HyperscriptLiteral
 using HyperscriptLiteral: parsevalue, parseprops, parsetag
-using HyperscriptLiteral: create_element
 using Hyperscript: render
 using Test
 
@@ -13,6 +12,7 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
         @test create_element("div", Dict("class" => "active")) |> render == "<div class=\"active\"></div>"
         @test create_element("div", Dict("class" => "active"), "Hi!") |> render == "<div class=\"active\">Hi&#33;</div>"
         @test create_element("div", Dict("class" => "active"), "Hi ", "there!") |> render == "<div class=\"active\">Hi there&#33;</div>"
+        @test create_element("circle", Dict("fill" => "red")) |>  render == "<circle fill=\"red\" />"
     end
 
     @testset "HTML spec." begin

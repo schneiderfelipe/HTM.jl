@@ -3,9 +3,10 @@ module HyperscriptLiteral
 # We call `tag` what Hyperscript.jl calls `Node`.
 # We call `type` or `tagtype` what Hyperscript.jl calls `tag`.
 # We call `props` what Hyperscript.jl calls `attrs`.
-using Hyperscript: AbstractNode, Node, DEFAULT_HTMLSVG_CONTEXT, context, tag, children, attrs
+using Hyperscript: AbstractNode, Node, DEFAULT_HTMLSVG_CONTEXT, tag, attrs, children
 
 export @htm_str
+export create_element
 
 macro htm_str(html)
     htm = parse(html)
@@ -13,7 +14,7 @@ macro htm_str(html)
 end
 
 toexpr(x) = x
-toexpr(x::AbstractNode) = (args = map(toexpr, (context(x), tag(x), children(x), attrs(x))); :($(Node)($(args...))))
+toexpr(x::AbstractNode) = (args = map(toexpr, (tag(x), attrs(x), children(x))); :(create_element($(args...))))
 toexpr(s::AbstractString) = startswith(s, '$') ? Meta.parse(s[nextind(s, begin):end]) : s
 toexpr(xs::AbstractVector) = (xs = map(toexpr, xs); :([$(xs...)]))
 toexpr(d::AbstractDict) = (d = :(Dict($(toexpr(collect(d))))); :($(postprocess)($(d))))
@@ -34,7 +35,6 @@ isenabled(x::Bool) = x
 isenabled(::Nothing) = false
 
 """
-    create_element(type::AbstractString)
     create_element(type::AbstractString, children...)
     create_element(type::AbstractString, props::AbstractDict, children...)
 
@@ -44,8 +44,7 @@ This is an alternative syntax and (currently) serves as a rather trivial
 absctraction layer inspired by
 [`React.createElement`](https://pt-br.reactjs.org/docs/react-api.html#createelement).
 """
-create_element(type::AbstractString) = Node(DEFAULT_HTMLSVG_CONTEXT, type, Any[], Dict{String, Any}())
-create_element(type::AbstractString, children...) = Node(DEFAULT_HTMLSVG_CONTEXT, type, children, Dict{String, Any}())
+create_element(type::AbstractString, children...) = create_element(type, Dict{String, Any}(), children...)
 create_element(type::AbstractString, props::AbstractDict, children...) = Node(DEFAULT_HTMLSVG_CONTEXT, type, children, props)
 
 """
