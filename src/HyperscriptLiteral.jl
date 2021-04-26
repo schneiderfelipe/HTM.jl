@@ -91,7 +91,7 @@ Parse a single HTML element.
 """
 function parseelem(io::IO)
     # TODO: revisit this implementation after.
-    c = peek(io, Char)
+    c = look(io, Char)
     c === '<' && return parsetag(io)
     return c === '$' ? parseinterp(io) : readwhile(c -> c ∉ ('$', '<'), io)
 end
@@ -140,7 +140,7 @@ function parseprops!(io::IO, props::AbstractDict)
     # TODO: revisit this implementation after.
     while !eof(io)
         skipchars(isspace, io)
-        peek(io, Char) ∈ ('/', '>') && break
+        look(io, Char) ∈ ('/', '>') && break
 
         key = parsekey(io)
         eof(io) && (props[key] = nothing; break)
@@ -169,19 +169,19 @@ Parse an HTML prop/attribute value.
 """
 function parsevalue(io::IO)
     skipchars(isspace, io)
-    return peek(io, Char) ∈ ('"', '\'') ? parsequotedvalue(io) : parseunquotedvalue(io)
+    return look(io, Char) ∈ ('"', '\'') ? parsequotedvalue(io) : parseunquotedvalue(io)
 end
 function parsequotedvalue(io::IO)
     q = read(io, Char)
 
     pieces = Any[]
-    while !eof(io) && peek(io, Char) != q
-        push!(pieces, peek(io, Char) === '$' ? parseinterp(io) : readwhile(c -> c ∉ ('$', q), io))
+    while !eof(io) && look(io, Char) != q
+        push!(pieces, look(io, Char) === '$' ? parseinterp(io) : readwhile(c -> c ∉ ('$', q), io))
     end
     skipchars(isequal(q), io)
     return pieces
 end
-parseunquotedvalue(io::IO) = peek(io, Char) === '$' ? parseinterp(io) : readwhile(c ->  !isspace(c) && c != '>', io)
+parseunquotedvalue(io::IO) = look(io, Char) === '$' ? parseinterp(io) : readwhile(c ->  !isspace(c) && c != '>', io)
 
 raw"""
     parseinterp(io::IO)
@@ -191,9 +191,9 @@ Parse an interpolation as string, including `$`.
 function parseinterp(io::IO)
     buffer = IOBuffer()
     write(buffer, read(io, Char))
-    (eof(io) || isspace(peek(io, Char))) && return '$'  # frustrated interp returns `Char`
+    (eof(io) || isspace(look(io, Char))) && return '$'  # frustrated interp returns `Char`
 
-    if peek(io, Char) === '('
+    if look(io, Char) === '('
         count = 1
         write(buffer, read(io, Char))
 
@@ -213,6 +213,14 @@ function parseinterp(io::IO)
 end
 
 # --- Utilities ---
+# All those could be part of Julia in the future.
+
+"""
+    look(io::IO, ::Type{T})
+
+Check what is next in a `IO` object.
+"""
+look(io::IO, ::Type{T}) where T = T(peek(io))
 
 """
     readwhile(predicate, io::IO)
@@ -221,7 +229,7 @@ Read characters matching a predicate.
 """
 function readwhile(predicate, io::IO)
     buffer = IOBuffer()
-    while !eof(io) && predicate(peek(io, Char))
+    while !eof(io) && predicate(look(io, Char))
         write(buffer, read(io, Char))
     end
     return String(take!(buffer))
