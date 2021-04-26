@@ -17,6 +17,8 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
             @test htm"<span>$fragment$fragment</span>" == htm"<span>$(fragment)$(fragment)</span>"
         end
 
+        @test htm"<span>$(:symbol)</span>" |> render == "<span>symbol</span>"
+
         @test_skip htm"<script>$(\"</script>\")</script>"  # BUG: should throw
 
         # TODO: this might be useful in the future, especially with JSExpr.jl.
@@ -87,6 +89,29 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
         @test htm"<span style=$(Dict(\"background\" => \"yellow\"))>It's all yellow!</span>" |> render == create_element("span", Dict("style" => Dict("background" => "yellow")), "It's all yellow!") |> render
     end
 
+    @testset "Escaped dollar signs`" begin
+        @test htm"<span>\$notvar</span>" |> render == raw"<span>&#36;notvar</span>"
+        @test htm"<span>\$(notvar)</span>" |> render == raw"<span>&#36;&#40;notvar&#41;</span>"
+
+        @test htm"<\$notvar />" |> render == raw"<&#36;notvar></&#36;notvar>"
+        @test htm"<span \$notvar />" |> render == raw"""<span &#36;notvar></span>"""
+
+        @test htm"<\$(notvar) />" |> render == raw"<&#36;&#40;notvar&#41;></&#36;&#40;notvar&#41;>"
+        @test htm"<span \$(notvar) />" |> render == raw"""<span &#36;&#40;notvar&#41;></span>"""
+
+        @test htm"<span \$notvar=active />" |> render == raw"""<span &#36;notvar="active"></span>"""
+        @test htm"<span class=\$notvar />" |> render == raw"""<span class="$notvar"></span>"""
+
+        @test htm"<span \$(notvar)=active />" |> render == raw"""<span &#36;&#40;notvar&#41;="active"></span>"""
+        @test htm"<span class=\$(notvar) />" |> render == raw"""<span class="$(notvar)"></span>"""
+
+        @test htm"<span \$notvar=\"active\" />" |> render == raw"""<span &#36;notvar="active"></span>"""
+        @test htm"<span class=\"\$notvar\" />" |> render == raw"""<span class="$notvar"></span>"""
+
+        @test htm"<span \$(notvar)=\"active\" />" |> render == raw"""<span &#36;&#40;notvar&#41;="active"></span>"""
+        @test htm"<span class=\"\$(notvar)\" />" |> render == raw"""<span class="$(notvar)"></span>"""
+    end
+
     @testset "create_element" begin
         @test create_element("div") |> render == "<div></div>"
         @test create_element("div", "Hi!") |> render == "<div>Hi&#33;</div>"
@@ -101,44 +126,70 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
     end
 
     @testset "Tag (IR)" begin
-        @test parsetag(IOBuffer("<div/>")) == Tag("div", Dict(), [], [])
+        @test parsetag(IOBuffer("<div />")) == Tag("div", Dict(), [], [])
         @test parsetag(IOBuffer("<div>Hi!</div>")) == Tag("div", Dict(), [], ["Hi!"])
-        @test parsetag(IOBuffer("<div class=active/>")) == Tag("div", Dict("class" => "active"), [], [])
+        @test parsetag(IOBuffer("<div class=active />")) == Tag("div", Dict("class" => "active"), [], [])
         @test parsetag(IOBuffer("<div class=active>Hi!</div>")) == Tag("div", Dict("class" => "active"), [], ["Hi!"])
         @test parsetag(IOBuffer("<div class=active>Hi there!</div>")) == Tag("div", Dict("class" => "active"), [], ["Hi there!"])
 
-        @test parsetag(IOBuffer("<button class=active disabled/>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), [], [])
-        @test parsetag(IOBuffer("<button class=active disabled>Click me</button>")) == Tag("button", Dict("class" => "active", "disabled" => nothing), [], ["Click me"])
+        @test parsetag(IOBuffer("<button class=active disabled />")) == Tag("button", Dict("class" => "active", "disabled" => true), [], [])
+        @test parsetag(IOBuffer("<button class=active disabled>Click me</button>")) == Tag("button", Dict("class" => "active", "disabled" => true), [], ["Click me"])
 
-        @test parsetag(IOBuffer("<circle fill=red/>")) == Tag("circle", Dict("fill" => "red"), [], [])
+        @test parsetag(IOBuffer("<circle fill=red />")) == Tag("circle", Dict("fill" => "red"), [], [])
     end
 
     @testset "Stress tests" begin
-        emptydiv = parsetag(IOBuffer("<div/>"))
-        activeemptydiv = parsetag(IOBuffer("<div class=active/>"))
-        disabledactiveemptydiv = parsetag(IOBuffer("<div class=active disabled/>"))
+        quotes = ("", '"', '\'')
+        separators = ("", ' ', '\n', '\t', "  ")
 
-        let c = "Hi there!"
-            nonemptydiv = parsetag(IOBuffer("<div>$(c)</div>"))
-            activenonemptydiv = parsetag(IOBuffer("<div class=active>$(c)</div>"))
-            disabledactivenonemptydiv = parsetag(IOBuffer("<div class=active disabled>$(c)</div>"))
+        @testset "Basic syntax" begin
+            voiddiv = parsetag(IOBuffer("<div />"))
+            litclass = parsetag(IOBuffer("<div class=active />"))
+            offlitclass = parsetag(IOBuffer("<div class=active disabled />"))
 
-            @testset "Separator \"$s\"" for s in ("", ' ', '\n', '\t', "  ")
-                @test parsetag(IOBuffer("<div$(s)/>")) == emptydiv
+            let c = "Hi there!"
+                nonvoiddiv = parsetag(IOBuffer("<div>$(c)</div>"))
+                activenonvoiddiv = parsetag(IOBuffer("<div class=active>$(c)</div>"))
+                disabledactivenonvoiddiv = parsetag(IOBuffer("<div class=active disabled>$(c)</div>"))
 
-                @test parsetag(IOBuffer("<div$(s)></div>")) == emptydiv
+                @testset "Separator `$(s)`" for s in separators
+                    @test parsetag(IOBuffer("<div$(s)/>")) == voiddiv
 
-                @test parsetag(IOBuffer("<div$(s)>$(c)</div>")) == nonemptydiv
+                    @test parsetag(IOBuffer("<div$(s)></div>")) == voiddiv
 
-                @testset "Quote \"$q\"" for q in ("", '"', '\'')
-                    @test parsetag(IOBuffer("<div class=$(q)active$(q)$(s)/>")) == activeemptydiv
-                    @test parsetag(IOBuffer("<div class=$(q)active$(q) disabled$(s)/>")) == disabledactiveemptydiv
+                    @test parsetag(IOBuffer("<div$(s)>$(c)</div>")) == nonvoiddiv
 
-                    @test parsetag(IOBuffer("<div class=$(q)active$(q)$(s)></div>")) == activeemptydiv
-                    @test parsetag(IOBuffer("<div class=$(q)active$(q) disabled$(s)></div>")) == disabledactiveemptydiv
+                    @testset "Quote `$(q)`" for q in quotes
+                        @test parsetag(IOBuffer("<div class=$(q)active$(q)$(s)/>")) == litclass
+                        @test parsetag(IOBuffer("<div class=$(q)active$(q) disabled$(s)/>")) == offlitclass
 
-                    @test parsetag(IOBuffer("<div class=$(q)active$(q)$(s)>$(c)</div>")) == activenonemptydiv
-                    @test parsetag(IOBuffer("<div class=$(q)active$(q) disabled$(s)>$(c)</div>")) == disabledactivenonemptydiv
+                        @test parsetag(IOBuffer("<div class=$(q)active$(q)$(s)></div>")) == litclass
+                        @test parsetag(IOBuffer("<div class=$(q)active$(q) disabled$(s)></div>")) == offlitclass
+
+                        @test parsetag(IOBuffer("<div class=$(q)active$(q)$(s)>$(c)</div>")) == activenonvoiddiv
+                        @test parsetag(IOBuffer("<div class=$(q)active$(q) disabled$(s)>$(c)</div>")) == disabledactivenonvoiddiv
+                    end
+                end
+            end
+        end
+
+        @testset "Dollar signs" begin
+            @test parsetag(IOBuffer("<span>\$notvar</span>")) == parsetag(IOBuffer(raw"<span>$notvar</span>"))
+            @test parsetag(IOBuffer("<span>\$(notvar)</span>")) == parsetag(IOBuffer(raw"<span>$(notvar)</span>"))
+
+            @testset "Separator `$(s)`" for s in separators
+                @test parsetag(IOBuffer("<\$notvar$(s)/>")) == parsetag(IOBuffer(raw"<$notvar></$notvar>"))
+                @test parsetag(IOBuffer("<span \$notvar$(s)/>")) == parsetag(IOBuffer(raw"""<span $notvar></span>"""))
+
+                @test parsetag(IOBuffer("<\$(notvar)$(s)/>")) == parsetag(IOBuffer(raw"<$(notvar)></$(notvar)>"))
+                @test parsetag(IOBuffer("<span \$(notvar)$(s)/>")) == parsetag(IOBuffer(raw"""<span $(notvar)></span>"""))
+
+                @testset "Quote `$(q)`" for q in quotes
+                    @test parsetag(IOBuffer("<span \$notvar=$(q)active$(q)$(s)/>")) == parsetag(IOBuffer(raw"""<span $notvar="active"></span>"""))
+                    @test parsetag(IOBuffer("<span class=$(q)\$notvar$(q)$(s)/>")) == parsetag(IOBuffer(raw"""<span class="$notvar"></span>"""))
+
+                    @test parsetag(IOBuffer("<span \$(notvar)=$(q)active$(q)$(s)/>")) == parsetag(IOBuffer(raw"""<span $(notvar)="active"></span>"""))
+                    @test parsetag(IOBuffer("<span class=$(q)\$(notvar)$(q)$(s)/>")) == parsetag(IOBuffer(raw"""<span class="$(notvar)"></span>"""))
                 end
             end
         end

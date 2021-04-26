@@ -9,6 +9,8 @@ using Hyperscript: Node, DEFAULT_HTMLSVG_CONTEXT
 export create_element
 export @htm_str
 
+include("utils.jl")
+
 """
     create_element(type::AbstractString, children...)
     create_element(type::AbstractString, props::AbstractDict, children...)
@@ -44,7 +46,7 @@ toexpr(x) = x
 function toexpr(x::Tag)
     type, props, children = toexpr.((x.type, x.props, x.children))
     !isempty(x.promises) && (props = :(merge($(props), $(toexpr(x.promises))...)))
-    return :(create_element($(type), $(process)($(props)), $(children)))
+    return :(create_element($(process)($(type)), $(process)($(props)), $(children)))
 end
 toexpr(s::AbstractString) = startswith(s, '$') ? Meta.parse(s[nextind(s, begin):end]) : s
 toexpr(xs::AbstractVector) = (xs = map(toexpr, xs); :([$(xs...)]))
@@ -53,13 +55,12 @@ toexpr(p::Pair) = :($(toexpr(first(p))) => $(toexpr(last(p))))
 
 process(x) = x
 process(xs::AbstractVector) = string(map(process, xs)...)
-process(d::AbstractDict) = Dict(process(p) for p in d if isenabled(p))
+process(d::AbstractDict) = Dict(process(p) for p ∈ d if isenabled(p))
 process(p::Pair) = process(first(p)) => process(last(p))
 process(x::Bool) = x ? nothing : error("should have been disabled")
 
 # We hide props if `false` or `nothing`, Hyperscript.jl uses `nothing` to
 # mean something else (empty prop).
-# TODO: suggest change in Hyperscript.jl. 💡
 isenabled(x) = true
 isenabled(p::Pair) = isenabled(last(p))
 isenabled(x::Bool) = x
@@ -109,7 +110,8 @@ Parse a single HTML element.
 function parseelem(io::IO)
     # TODO: revisit this implementation after.
     startswith(io, '<') && return parsetag(io)
-    return startswith(io, '$') ? parseinterp(io) : readuntil(c -> c ∈ ('<', '$'), io)
+    skipstartswith(io, "\\\$") && return '$'
+    return parseinterp(c -> c ∈ ('<', '$', '\\'), io)
 end
 
 """
@@ -118,7 +120,8 @@ end
 Parse a `Tag` object.
 """
 function parsetag(io::IO)
-    type = parsetagtype(io)
+    skipchars(isequal('<'), io)
+    type = skipstartswith(io, "\\\$") ? ['$', parsetagtype(io)] : parsetagtype(io)
     props, promises = parseprops(io)
     if read(io, Char) === '/'
         skipchars(isequal('>'), io)
@@ -128,8 +131,7 @@ function parsetag(io::IO)
     endtag = "</$(type)>"
     children = parseelems(io -> !startswith(io, endtag), io)
 
-    # TODO: might use a skipuntil
-    skip(io, length(endtag))
+    skipstartswith(io, endtag) || error("tag not properly closed")
     return Tag(type, props, promises, children)
 end
 
@@ -138,7 +140,7 @@ end
 
 Parse an HTML tag type.
 """
-parsetagtype(io::IO) = (skipchars(isequal('<'), io); readuntil(c -> isspace(c) || c ∈ ('>', '/'), io))
+parsetagtype(io::IO) = readuntil(c -> isspace(c) || c ∈ ('>', '/'), io)
 
 """
     parseprops(io::IO)
@@ -147,7 +149,7 @@ Parse HTML properties of a tag.
 """
 function parseprops(io::IO)
     # TODO: revisit this implementation after.
-    props, promises = Dict{String, Any}(), []
+    props, promises = Dict{Union{String,Vector{Any}}, Any}(), []
     parseprops!(io, props, promises)
     return props, promises
 end
@@ -167,11 +169,11 @@ Parse a single HTML property of a tag.
 """
 function parseprop!(io::IO, props::AbstractDict)
     # TODO: revisit this implementation after.
-    key = parsekey(io)
-    eof(io) && (props[key] = nothing; return)
+    key = skipstartswith(io, "\\\$") ? ['$', parsekey(io)] : parsekey(io)
+    eof(io) && (props[key] = true; return)
 
     c = read(io, Char)
-    props[key] = c === '=' ? parsevalue(io) : nothing
+    props[key] = c === '=' ? parsevalue(io) : true
     c ∈ ('>', '/') && skip(io, -1)
 end
 
@@ -191,25 +193,36 @@ parsevalue(io::IO) = (skipchars(isspace, io); startswith(io, ('"', '\'')) ? pars
 function parsequotedvalue(io::IO)
     q = read(io, Char)
     pieces = []
-    while !eof(io) && !startswith(io, q)
-        push!(pieces, startswith(io, '$') ? parseinterp(io) : readuntil(c -> c ∈ (q, '$'), io))
+    while !(eof(io) || startswith(io, q))
+        push!(pieces, skipstartswith(io, "\\\$") ? '$' : parseinterp(c -> c ∈ (q, '$', '\\'), io))
     end
     skipchars(isequal(q), io)
     length(pieces) == 1 && return only(pieces)
     return pieces
 end
-parseunquotedvalue(io::IO) = startswith(io, '$') ? parseinterp(io) : readuntil(c -> isspace(c) || c ∈ ('>', '/'), io)
+function parseunquotedvalue(io::IO)
+    let 📠(c) = isspace(c) || c ∈ ('>', '/', '$', '\\')
+        return skipstartswith(io, "\\\$") ? ['$', readuntil(📠, io)] : parseinterp(📠, io)
+    end
+end
 
 raw"""
     parseinterp(io::IO)
+    parseinterp(fallback, io::IO)
 
 Parse an interpolation as string, including `$`.
+
+The input must start with `$` if no fallback function is given.
+The fallback function is passed to `readuntil` if the input does not start
+with `$`.
 """
 function parseinterp(io::IO)
     # TODO: revisit this implementation after.
     buf = IOBuffer()
     write(buf, read(io, Char))
-    (eof(io) || isspace(peek(io, Char))) && return '$'  # frustrated interp returns `Char`
+
+    # Frustrated interpolations are represented as single `'$'`s.
+    (eof(io) || isspace(peek(io, Char))) && return '$'
 
     if startswith(io, '(')
         count = 1
@@ -225,48 +238,10 @@ function parseinterp(io::IO)
             write(buf, c)
         end
     else
-        write(buf, readuntil(c -> isspace(c) || c ∈ ('<', '>', '$'), io))
+        write(buf, readuntil(c -> isspace(c) || c ∈ ('<', '>', '/', '"', '\'', '=', '$', '\\'), io))
     end
     return String(take!(buf))
 end
-
-# --- Utilities ---
-# All those could be part of Julia in the future.
-
-"""
-    readuntil(predicate, io::IO)
-
-Read characters until matching a predicate.
-
-Based on <https://github.com/JuliaLang/julia/issues/21355#issue-221121166>.
-"""
-function Base.readuntil(predicate, io::IO)
-    buf = IOBuffer()
-    while !eof(io)
-        c = read(io, Char)
-        if predicate(c)
-            skip(io, -ncodeunits(c))
-            break
-        end
-        write(buf, c)
-    end
-    return String(take!(buf))
-end
-
-"""
-    startswith(io::IO, prefix::Union{AbstractString,Base.Chars})
-
-Check if an `IO` object starts with a prefix.
-
-Based on <https://github.com/JuliaLang/julia/issues/40616#issue-867861851>.
-"""
-function Base.startswith(io::IO, prefix::Union{AbstractString,Base.Chars})
-    pos = position(io)
-    s = _getminprefix(io, prefix)
-    seek(io, pos)
-    return startswith(s, prefix)
-end
-_getminprefix(io::IO, prefix::Union{AbstractString,AbstractChar}) = String(read(io, length(prefix)))
-_getminprefix(io::IO, chars::Union{Tuple{Vararg{<:AbstractChar}},AbstractVector{<:AbstractChar},Set{<:AbstractChar}}) = _getminprefix(io, first(chars))
+parseinterp(fallback, io::IO) = startswith(io, '$') ? parseinterp(io) : readuntil(fallback, io)
 
 end
