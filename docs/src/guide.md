@@ -81,7 +81,7 @@ julia> htm"" === nothing
 true
 ```
 
-If multiple top-level nodes are given, the nodes are returned as a "document fragment" (a `Vector{Any}`).
+If multiple top-level nodes are given, the nodes are returned as a "document fragment" (a vector).
 
 ```jldoctest
 julia> htm"I'm a <em>document fragment</em> (actually a vector)."

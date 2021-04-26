@@ -1,38 +1,13 @@
 module HyperscriptLiteral
 
-# We call `tag` what Hyperscript.jl calls `Node`.
-# We call `type` or `tagtype` what Hyperscript.jl calls `tag`.
-# We call `props` what Hyperscript.jl calls `attrs`.
-using Hyperscript: AbstractNode, Node, DEFAULT_HTMLSVG_CONTEXT, tag, attrs, children
+# We say...          Hyperscript.jl says...
+# `tag` or `Tag`      => `Node`
+# `type` or `tagtype` => `tag`
+# `props` (property)  => `attrs` (attribute)
+using Hyperscript: Node, DEFAULT_HTMLSVG_CONTEXT
 
-export @htm_str
 export create_element
-
-macro htm_str(html)
-    htm = parse(html)
-    esc(toexpr(htm))
-end
-
-toexpr(x) = x
-toexpr(x::AbstractNode) = (args = map(toexpr, (tag(x), attrs(x), children(x))); :(create_element($(args...))))
-toexpr(s::AbstractString) = startswith(s, '$') ? Meta.parse(s[nextind(s, begin):end]) : s
-toexpr(xs::AbstractVector) = (xs = map(toexpr, xs); :([$(xs...)]))
-toexpr(d::AbstractDict) = (d = :(Dict($(toexpr(collect(d))))); :($(postprocess)($(d))))
-toexpr(p::Pair) = :($(toexpr(first(p))) => $(toexpr(last(p))))
-
-postprocess(x) = x
-postprocess(xs::AbstractVector) = string(map(postprocess, xs)...)
-postprocess(d::AbstractDict) = Dict(postprocess(p) for p in d if isenabled(p))
-postprocess(p::Pair) = postprocess(first(p)) => postprocess(last(p))
-postprocess(x::Bool) = x ? nothing : error("should have been disabled")
-
-# We hide props if `false` or `nothing`, Hyperscript.jl uses `nothing` to
-# mean something else (empty prop).
-# TODO: suggest change in Hyperscript.jl. 💡
-isenabled(x) = true
-isenabled(p::Pair) = isenabled(last(p))
-isenabled(x::Bool) = x
-isenabled(::Nothing) = false
+export @htm_str
 
 """
     create_element(type::AbstractString, children...)
@@ -48,8 +23,46 @@ create_element(type::AbstractString, children...) = create_element(type, Dict{St
 create_element(type::AbstractString, props::AbstractDict, children...) = Node(DEFAULT_HTMLSVG_CONTEXT, type, children, props)
 
 """
+    Tag(type, props, children)
+
+Compile time internal representation of an HTML tag.
+"""
+struct Tag
+    type
+    props
+    children
+end
+Base.:(==)(a::Tag, b::Tag) = a.type == b.type && a.props == b.props && a.children == b.children
+
+macro htm_str(s)
+    htm = parse(s)
+    esc(toexpr(htm))
+end
+
+toexpr(x) = x
+toexpr(x::Tag) = (args = map(toexpr, (x.type, x.props, x.children)); :(create_element($(args...))))
+toexpr(s::AbstractString) = startswith(s, '$') ? Meta.parse(s[nextind(s, begin):end]) : s
+toexpr(xs::AbstractVector) = (xs = map(toexpr, xs); :([$(xs...)]))
+toexpr(d::AbstractDict) = (d = :(Dict($(toexpr(collect(d))))); :($(process)($(d))))
+toexpr(p::Pair) = :($(toexpr(first(p))) => $(toexpr(last(p))))
+
+process(x) = x
+process(xs::AbstractVector) = string(map(process, xs)...)
+process(d::AbstractDict) = Dict(process(p) for p in d if isenabled(p))
+process(p::Pair) = process(first(p)) => process(last(p))
+process(x::Bool) = x ? nothing : error("should have been disabled")
+
+# We hide props if `false` or `nothing`, Hyperscript.jl uses `nothing` to
+# mean something else (empty prop).
+# TODO: suggest change in Hyperscript.jl. 💡
+isenabled(x) = true
+isenabled(p::Pair) = isenabled(last(p))
+isenabled(x::Bool) = x
+isenabled(::Nothing) = false
+
+"""
     parse(io::IO)
-    parse(html::AbstractString)
+    parse(s::AbstractString)
 
 Parse HTML.
 """
@@ -59,7 +72,7 @@ function parse(io::IO)
     length(elems) == 1 && return only(elems)
     return elems
 end
-parse(html::AbstractString) = parse(IOBuffer(html))
+parse(s::AbstractString) = parse(IOBuffer(s))
 
 # --- HTML specification ---
 
@@ -73,7 +86,7 @@ This function is the entry point for an implementation of a subset of the
 """
 parseelems(io::IO) = parseelems(io -> true, io)
 function parseelems(predicate, io::IO)
-    elems = Any[]
+    elems = []
     parseelems!(predicate, io, elems)
     return elems
 end
@@ -98,33 +111,35 @@ end
 """
     parsetag(io::IO)
 
-Parse an HTML tag.
+Parse a `Tag` object.
 """
 function parsetag(io::IO)
     type = parsetagtype(io)
     props = parseprops(io)
-    read(io, Char) === '/' && return create_element(type, props)
+    read(io, Char) === '/' && return Tag(type, props, [])
 
     endtag = "</$(type)>"
     children = parseelems(io -> !startswith(io, endtag), io)
 
+    # TODO: might use a skipuntil
     skip(io, length(endtag))
-    return create_element(type, props, children...)
+    return Tag(type, props, children)
 end
 
 """
     parsetagtype(io::IO)
 
-Parse an HTML tag name.
+Parse an HTML tag type.
 """
 parsetagtype(io::IO) = (skipchars(isequal('<'), io); readuntil(c -> isspace(c) || c ∈ ('>', '/'), io))
 
 """
     parseprops(io::IO)
 
-Parse HTML props/attributes of a tag.
+Parse HTML properties of a tag.
 """
 function parseprops(io::IO)
+    # TODO: revisit this implementation after.
     props = Dict{String, Any}()
     parseprops!(io, props)
     return props
@@ -147,27 +162,27 @@ end
 """
     parsekey(io::IO)
 
-Parse an HTML prop/attribute key.
+Parse an HTML property key.
 """
 parsekey(io::IO) = readuntil(c -> isspace(c) || c ∈ ('=', '>', '/'), io)
 
 """
     parsevalue(io::IO)
 
-Parse an HTML prop/attribute value.
+Parse an HTML property value.
 """
 parsevalue(io::IO) = (skipchars(isspace, io); startswith(io, ('"', '\'')) ? parsequotedvalue(io) : parseunquotedvalue(io))
 function parsequotedvalue(io::IO)
     q = read(io, Char)
 
-    pieces = Any[]
+    pieces = []
     while !eof(io) && !startswith(io, q)
         push!(pieces, startswith(io, '$') ? parseinterp(io) : readuntil(c -> c ∈ (q, '$'), io))
     end
     skipchars(isequal(q), io)
     return pieces
 end
-parseunquotedvalue(io::IO) = startswith(io, '$') ? parseinterp(io) : readuntil(c -> isspace(c) || c == '>', io)
+parseunquotedvalue(io::IO) = startswith(io, '$') ? parseinterp(io) : readuntil(c -> isspace(c) || c === '>', io)
 
 raw"""
     parseinterp(io::IO)
@@ -194,7 +209,7 @@ function parseinterp(io::IO)
             write(buf, c)
         end
     else
-        write(buf, readuntil(c -> isspace(c) || c == '<', io))
+        write(buf, readuntil(c -> isspace(c) || c === '<', io))
     end
     return String(take!(buf))
 end

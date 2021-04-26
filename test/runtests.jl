@@ -1,5 +1,6 @@
 using HyperscriptLiteral
 using HyperscriptLiteral: parsevalue, parseprops, parsetag
+using HyperscriptLiteral: Tag
 using Hyperscript: render
 using Test
 
@@ -16,10 +17,10 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
     end
 
     @testset "HTML spec." begin
-        @test parsetag(IOBuffer("<a/>")) == create_element("a")
-        @test parsetag(IOBuffer("<a>b</a>")) == create_element("a", "b")
-        @test parsetag(IOBuffer("<a b=c d/>")) == create_element("a", Dict("b" => "c", "d" => nothing))
-        @test parsetag(IOBuffer("<a b=c d>e</a>")) == create_element("a", Dict("b" => "c", "d" => nothing), "e")
+        @test parsetag(IOBuffer("<a/>")) == Tag("a", Dict(), [])
+        @test parsetag(IOBuffer("<a>b</a>")) == Tag("a", Dict(), ["b"])
+        @test parsetag(IOBuffer("<a b=c d/>")) == Tag("a", Dict("b" => "c", "d" => nothing), [])
+        @test parsetag(IOBuffer("<a b=c d>e</a>")) == Tag("a", Dict("b" => "c", "d" => nothing), ["e"])
 
         @test parsetag(IOBuffer("<a></a>")) == parsetag(IOBuffer("<a/>"))
         @test parsetag(IOBuffer("<a />")) == parsetag(IOBuffer("<a/>"))
