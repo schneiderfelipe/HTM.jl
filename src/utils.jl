@@ -43,4 +43,4 @@ _getminprefix(io::IO, chars::Union{Tuple{Vararg{<:AbstractChar}},AbstractVector{
 Check if an `IO` object starts with a prefix and skip it.
 """
 skipstartswith(io::IO, prefix::Union{AbstractString,AbstractChar}) = startswith(io, prefix) ? (skip(io, length(prefix)); true) : false
-skipstartswith(io::IO, chars::Union{Tuple{Vararg{<:AbstractChar}},AbstractVector{<:AbstractChar},Set{<:AbstractChar}}) = startswith(io, chars) ? (skip(io, length(first(chars))); true) : false
+# skipstartswith(io::IO, chars::Union{Tuple{Vararg{<:AbstractChar}},AbstractVector{<:AbstractChar},Set{<:AbstractChar}}) = startswith(io, chars) ? (skip(io, length(first(chars))); true) : false

@@ -18,6 +18,8 @@ julia> htm"<h1>Hello, $(whom)</h1>"
 
 HyperscriptLiteral.jl parses HTML into [Hyperscript.jl](https://github.com/yurivish/Hyperscript.jl) objects.
 
+This is a work in progress!
+
 Please help us improve by sharing your feedback. 🙏
 TODO: link to issues
 

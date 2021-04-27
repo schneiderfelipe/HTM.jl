@@ -127,10 +127,8 @@ function parsetag(io::IO)
         skipchars(isequal('>'), io)
         return Tag(type, props, promises, [])
     end
-
     endtag = "</$(type)>"
     children = parseelems(io -> !startswith(io, endtag), io)
-
     skipstartswith(io, endtag) || error("tag not properly closed")
     return Tag(type, props, promises, children)
 end
@@ -171,7 +169,6 @@ function parseprop!(io::IO, props::AbstractDict)
     # TODO: revisit this implementation after.
     key = skipstartswith(io, "\\\$") ? ['$', parsekey(io)] : parsekey(io)
     eof(io) && (props[key] = true; return)
-
     c = read(io, Char)
     props[key] = c === '=' ? parsevalue(io) : true
     c ∈ ('>', '/') && skip(io, -1)
@@ -220,14 +217,10 @@ function parseinterp(io::IO)
     # TODO: revisit this implementation after.
     buf = IOBuffer()
     write(buf, read(io, Char))
-
-    # Frustrated interpolations are represented as single `'$'`s.
-    (eof(io) || isspace(peek(io, Char))) && return '$'
-
+    (eof(io) || isspace(peek(io, Char))) && return '$'  # frustrated interp
     if startswith(io, '(')
         count = 1
         write(buf, read(io, Char))
-
         while count > 0
             c = read(io, Char)
             if c === '('
