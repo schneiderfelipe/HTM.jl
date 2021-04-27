@@ -1,6 +1,12 @@
 ```@meta
 DocTestSetup = quote
     using HyperscriptLiteral
+
+    struct Link{H,C}
+        href::H
+        children::C
+    end
+    Base.show(io::IO, mime::MIME"text/html", a::Link) = show(io, mime, htm"<a href=$(a.href)>$(a.children)</a>")
 end
 ```
 
@@ -81,14 +87,11 @@ julia> htm"" === nothing
 true
 ```
 
-If multiple top-level nodes are given, the nodes are returned as a "document fragment" (a vector).
+If multiple top-level nodes are given, the nodes are returned as a "document fragment" (a tuple).
 
 ```jldoctest
-julia> htm"I'm a <em>document fragment</em> (actually a vector)."
-3-element Vector{Any}:
- "I'm a "
- <em>document fragment</em>
- " (actually a vector)."
+julia> htm"I'm a <em>document fragment</em> (actually a tuple)."
+("I'm a ", <em>document fragment</em>, " (actually a tuple).")
 ```
 
 ### Automatic escaping and interpolation
@@ -250,7 +253,7 @@ You can safely interpolate into style properties, too, by specifying the style a
 
 ```jldoctest
 julia> htm"""<span style=$(Dict("background" => "yellow"))>It's all yellow!</span>"""
-<span style="Dict(&#34;background&#34; =&#62; &#34;yellow&#34;)">It&#39;s all yellow&#33;</span>
+<span style="Dict{String, Any}(&#34;background&#34; =&#62; &#34;yellow&#34;)">It&#39;s all yellow&#33;</span>
 ```
 
 ### `style` tags
@@ -297,7 +300,56 @@ end)</script>"
 </script>
 ```
 
+## Components
+
+Julia *already* has a component concept: it is called the display convention.
+You just have to have `Base.show` overloaded for `text/html` (and maybe
+`text/plain`).
+
+Especifically, the way of doing components is through functions and
+structures.
+A function could work as follows:
+
+```jldoctest
+julia> mycomponent(name) = htm"<div>My name is $(name).</div>"
+mycomponent (generic function with 1 method)
+
+julia> const app = htm"$(mycomponent(\"John Doe\"))"
+<div>My name is John Doe.</div>
+```
+
+For a structure, you would to overload `Base.show` for `text/html`:
+
+```jldoctest
+julia> struct Link{H,C}
+           href::H
+           children::C
+       end
+
+julia> Base.show(io::IO, mime::MIME"text/html", a::Link) =
+           show(io, mime, htm"<a href=$(a.href)>$(a.children)</a>")
+
+julia> htm"""<span>$(Link("http://example.com", "Some Text"))</span>"""
+<span><a href="http://example.com">Some Text</a></span>
+```
+
+If your object is the single one parsed, `Base.show`  for `text/plain` will
+be called.
+You can adjust the printing in this case by overloading `Base.show` for this,
+maybe falling back to the one above:
+
+```jldoctest
+julia> htm"""$(Link("http://example.com", "Some Text"))"""
+Link{String, String}("http://example.com", "Some Text")
+
+julia> Base.show(io::IO, mime::MIME"text/plain", a::Link) = show(io, MIME("text/html"), a)
+
+julia> htm"""$(Link("http://example.com", "Some Text"))"""
+<a href="http://example.com">Some Text</a>
+```
+
 ## Guide roadmap
 
 - [ ] Compare with Hyperscript.jl in the documentation.
 - [ ] Using JSExpr.jl with HyperscriptLiteral.jl
+- [ ] Separate things in basics and advanced

@@ -16,7 +16,7 @@ makedocs(;
     pages=[
         "Home" => "index.md",
         "Guide" => "guide.md",
-        "How it works" => "howitworks.md",  # change to "Design"
+        "Design" => "design.md",
         "Related packages" => "related.md",
         "Docstrings" => "autodocs.md",
     ],
