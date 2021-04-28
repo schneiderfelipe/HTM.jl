@@ -7,6 +7,8 @@ simplerender(x) = replace(render(x), r"\s+" => ' ')
 
 @testset "HyperscriptLiteral.jl" begin
     @testset "Features" begin
+        # TODO: Ensure we get 100% coverage, but make simpler tests. Examples should be in the documentation.
+
         let fragment = htm"I'm a <em>document fragment</em>."
             @test fragment == ("I'm a ", htm"<em>document fragment</em>", ".")
 

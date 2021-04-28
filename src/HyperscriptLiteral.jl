@@ -48,7 +48,7 @@ struct Tag{T<:Union{AbstractString,Tuple},A<:AbstractDict,P<:Union{AbstractVecto
     children::C
     Tag(type, props, promises=(), children=()) = new{typeof(type),typeof(props),typeof(promises),typeof(children)}(type, props, promises, children)
 end
-Base.:(==)(🍍::Tag, 🍌::Tag) = 🍍.type == 🍌.type && 🍍.props == 🍌.props && 🍍.children == 🍌.children
+Base.:(==)(🍍::Tag, 🍌::Tag) = 🍍.type == 🍌.type && 🍍.props == 🍌.props && all(🍍.promises .== 🍌.promises) && all(🍍.children .== 🍌.children)
 
 macro htm_str(s)
     htm = parse(s)
