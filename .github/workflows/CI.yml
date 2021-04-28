@@ -10,8 +10,8 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.3'
-          - '1.4'
+          - '1.4.1'
+          - '1.5.3'
           - 'nightly'
         os:
           - ubuntu-latest
@@ -55,9 +55,9 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using JSX
-            DocMeta.setdocmeta!(JSX, :DocTestSetup, :(using JSX); recursive=true)
-            doctest(JSX)'
+            using HyperscriptLiteral
+            DocMeta.setdocmeta!(HyperscriptLiteral, :DocTestSetup, :(using HyperscriptLiteral); recursive=true)
+            doctest(HyperscriptLiteral)'
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
