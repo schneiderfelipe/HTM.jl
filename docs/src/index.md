@@ -1,14 +1,5 @@
-```@meta
-CurrentModule = JSX
-```
+```@eval
+using Markdown
 
-# JSX
-
-Documentation for [JSX](https://github.com/schneiderfelipe/JSX.jl).
-
-```@index
-```
-
-```@autodocs
-Modules = [JSX]
+Markdown.parse_file("../../README.md")
 ```

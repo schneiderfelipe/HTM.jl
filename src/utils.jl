@@ -1,77 +1,46 @@
-abstract type AnyContext end
-
-struct TagContext <: AnyContext end
-struct AttributeContext <: AnyContext end
-struct NodeContext <: AnyContext end
-
-struct BranchNodeContext <: AnyContext end
-struct LeafNodeContext <: AnyContext end
-struct ComponentNodeContext <: AnyContext end
-
-struct LeafCommonNodeContext <: AnyContext end
+# --- Utilities ---
+# That could be contributed to Julia.
 
 """
-Process and normalize attributes.
-"""
-processattr(attr::Pair, f) = f(first(attr)) => last(attr)
-processattrs(attrs::AbstractVector, f) = map(attr -> processattr(attr, f), attrs)
+    readuntil(predicate, io::IO)
 
-"""
-Check if a string is empty of pure whitespace.
-"""
-isblank(str) = isempty(str) || isnothing(findfirst(!isspace, str))
+Read characters until matching a predicate.
 
+Based on <https://github.com/JuliaLang/julia/issues/21355#issue-221121166>.
 """
-Recreate a vector as an expression.
-Optionally, apply a function to each element beforehand.
-"""
-vec2expr(vec::AbstractVector) = :([$(vec...)])
-vec2expr(f, vec::AbstractVector) = vec2expr(map(f, vec))
-
-"""
-Append if vector, push otherwise.
-"""
-pushorappend!(arr::AbstractVector, ret) = push!(arr, ret)
-pushorappend!(arr::AbstractVector, ret::AbstractVector) = append!(arr, ret)
-
-"""
-Push strings only if the last object in the vector is not a string, concatenate otherwise.
-This ensures strings are as long as possible.
-
-We also ensure the "\$" thing works properly.
-"""
-pushexprorstr!(exprs::AbstractVector, expr) = !isnothing(expr) && push!(exprs, expr)
-function pushexprorstr!(exprs::AbstractVector, str::AbstractString)
-    if !isblank(str)
-        if !isempty(exprs) && last(exprs) isa AbstractString
-            # Make strings contiguous
-            exprs[end] *= str
-        else
-            # Hack to support "\$"
-            push!(exprs, replace(str, "\\\$" => "\$"))
+@inline function Base.readuntil(predicate, io::IO)
+    buf = IOBuffer()
+    while !eof(io)
+        c = read(io, Char)
+        if predicate(c)
+            skip(io, -ncodeunits(c))
+            break
         end
+        write(buf, c)
     end
+    return String(take!(buf))
 end
 
 """
-Wrap an expression in a try...catch block.
+    startswith(io::IO, prefix::Union{AbstractString,Base.Chars})
+
+Check if an `IO` object starts with a prefix.
+
+Based on <https://github.com/JuliaLang/julia/issues/40616#issue-867861851>.
 """
-function trycatchexpr(tryexpr, undefvarexpr)
-    return Expr(:try,
-        Expr(:block,
-            tryexpr,
-        ),
-        :err,
-        Expr(:block,  # catch
-            Expr(:if,
-                :(err isa UndefVarError),
-                Expr(:block,  # then
-                    undefvarexpr,
-                ),
-                Expr(:block,  # else
-                    :(rethrow()),
-                ),
-            ),
-        ),
-    )
+@inline function Base.startswith(io::IO, prefix::Union{AbstractString,Base.Chars})
+    pos = position(io)
+    s = _getminprefix(io, prefix)
+    seek(io, pos)
+    return startswith(s, prefix)
 end
+@inline _getminprefix(io::IO, prefix::Union{AbstractString,AbstractChar}) = String(read(io, length(prefix)))
+@inline _getminprefix(io::IO, chars::Union{Tuple{Vararg{<:AbstractChar}},AbstractVector{<:AbstractChar},Set{<:AbstractChar}}) = _getminprefix(io, first(chars))
+
+"""
+    skipstartswith(io::IO, prefix::Union{AbstractString,Base.Chars})
+
+Check if an `IO` object starts with a prefix and skip it.
+"""
+@inline skipstartswith(io::IO, prefix::Union{AbstractString,AbstractChar}) = startswith(io, prefix) ? (skip(io, length(prefix)); true) : false
+# @inline skipstartswith(io::IO, chars::Union{Tuple{Vararg{<:AbstractChar}},AbstractVector{<:AbstractChar},Set{<:AbstractChar}}) = startswith(io, chars) ? (skip(io, length(first(chars))); true) : false
