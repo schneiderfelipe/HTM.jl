@@ -15,7 +15,9 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Guide" => "guide.md",
+        "Guide" => [
+            "Basics" => "basics.md",
+        ],
         "Design" => "design.md",
         "Related packages" => "related.md",
         "Docstrings" => "autodocs.md",

@@ -1,16 +1,16 @@
 # Related open-source packages
 
-The following open-source packages provide similar or even extended functionality as HTM.jl:
+The following open-source packages provide **similar or extended functionality** as HTM.jl:
 
-- [HypertextLiteral.jl](https://github.com/MechanicalRabbit/HypertextLiteral.jl) offers a similar but alternative syntax.
+- [HypertextLiteral.jl](https://github.com/MechanicalRabbit/HypertextLiteral.jl) offers a similar syntax and idea.
 - [AcuteML.jl](https://github.com/aminya/AcuteML.jl) provides a distinct but related idea.
 
-The following open-source packages are possible backends:
+The following open-source packages are **possible backends** (not thoroughly tested):
 
-- [Hyperscript.jl](https://github.com/yurivish/Hyperscript.jl)
-- [Hiccup.jl](https://github.com/JunoLab/Hiccup.jl)
+- [Hyperscript.jl](https://github.com/yurivish/Hyperscript.jl) is the default backend
 - [WebIO.jl](https://github.com/JuliaGizmos/WebIO.jl)
+- [Hiccup.jl](https://github.com/JunoLab/Hiccup.jl)
 
-The following open-source packages extend HTM.jl and play nice with it:
+The following open-source packages **extend and play nice** with HTM.jl:
 
 - [JSExpr.jl](https://github.com/JuliaGizmos/JSExpr.jl) offer an elegant way of writing JavaScript.
