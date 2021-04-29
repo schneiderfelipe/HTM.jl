@@ -329,8 +329,8 @@ julia> struct Link{H,C}
 julia> Base.show(io::IO, mime::MIME"text/html", a::Link) =
            show(io, mime, htm"<a href=$(a.href)>$(a.children)</a>")
 
-julia> htm"""<span>$(Link("http://example.com", "Some Text"))</span>"""
-<span><a href="http://example.com">Some Text</a></span>
+julia> htm"""<em>$(Link("http://bit.ly/htm-jl", "HTM.jl"))</em>"""
+<em><a href="http://bit.ly/htm-jl">HTM.jl</a></em>
 ```
 
 If your object is the single one parsed, `Base.show`  for `text/plain` will
@@ -339,10 +339,11 @@ You can adjust the printing in this case by overloading `Base.show` for this,
 maybe falling back to the one above:
 
 ```jldoctest
-julia> htm"""$(Link("http://example.com", "Some Text"))"""
-Link{String, String}("http://example.com", "Some Text")
+julia> htm"""$(Link("http://bit.ly/htm-jl", "HTM.jl"))"""
+Link{String, String}("http://bit.ly/htm-jl", "HTM.jl")
 
-julia> Base.show(io::IO, mime::MIME"text/plain", a::Link) = show(io, MIME("text/html"), a)
+julia> Base.show(io::IO, mime::MIME"text/plain", a::Link) =
+           show(io, MIME("text/html"), a)
 
 julia> htm"""$(Link("http://example.com", "Some Text"))"""
 <a href="http://example.com">Some Text</a>
