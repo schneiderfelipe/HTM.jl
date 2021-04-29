@@ -1,11 +1,11 @@
-using HyperscriptLiteral
-using HyperscriptLiteral: parsetag, Tag
+using HTM
+using HTM: parsetag, Tag
 using Hyperscript: render
 using Test
 
 simplerender(x) = replace(render(x), r"\s+" => ' ')
 
-@testset "HyperscriptLiteral.jl" begin
+@testset "HTM.jl" begin
     @testset "Features" begin
         # TODO: Ensure we get 100% coverage, but make simpler tests. Examples should be in the documentation.
 

@@ -1,17 +1,16 @@
 ```@meta
 DocTestSetup = quote
-    using HyperscriptLiteral
-    using BenchmarkTools
+    using HTM
 end
 ```
 
 # How does it work
 
-Under the hood, HyperscriptLiteral.jl mimicks
+Under the hood, HTM.jl mimicks
 [observablehq/htl](https://observablehq.com/@observablehq/htl) by implementing
 a subset of the HTML5 tokenizer state machine (TODO link to HTML5
 specification).
-This allows HyperscriptLiteral.jl to distinguish different contexts such as tags and
+This allows HTM.jl to distinguish different contexts such as tags and
 attributes, allowing embedded expressions to be interpreted correctly.
 This is more formal (and more precise) than using regular expressions to
 search for "attribute-like sequences" in markup.
@@ -46,14 +45,14 @@ julia> @macroexpand htm"<span />"
 The parsing processing is actually fast too:
 
 ```julia-repl
-julia> @btime HyperscriptLiteral.parse("<span />");
+julia> @btime HTM.parse("<span />");
   866.435 ns (24 allocations: 1.19 KiB)
 ```
 
-And unlike regular string interpolation, HyperscriptLiteral.jl directly creates content rather than reusable templates.
-HyperscriptLiteral.jl is thus well-suited to reactive environments, where HTML is automatically generated when inputs change.
+And unlike regular string interpolation, HTM.jl directly creates content rather than reusable templates.
+HTM.jl is thus well-suited to reactive environments, where HTML is automatically generated when inputs change.
 
 We also wanted to minimize new syntax.
 We were inspired by HTM, but HTM emulates JSX--not HTML5--requiring closing tags for every element.
 
-For a closer look at our implementation, please [view the source](https://github.com/schneiderfelipe/HyperscriptLiteral.jl) and let us know what you think! We welcome your contributions and bug reports on GitHub.
+For a closer look at our implementation, please [view the source](https://github.com/schneiderfelipe/HTM.jl) and let us know what you think! We welcome your contributions and bug reports on GitHub.

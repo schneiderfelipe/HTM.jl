@@ -1,4 +1,4 @@
-module HyperscriptLiteral
+module HTM
 
 # We say,            Hyperscript.jl says,
 # `tag` or `Tag`      => `Node`
@@ -13,8 +13,8 @@ export @htm_str
 include("utils.jl")
 
 """
-    create_element(type::AbstractString[, children...])
-    create_element(type::AbstractString, props::Union{AbstractDict,Tuple}[, children...])
+    create_element(type[, children...])
+    create_element(type, props[, children...])
 
 Create a Hyperscript.jl element.
 
@@ -22,8 +22,8 @@ This is an alternative syntax and (currently) serves as a rather trivial
 absctraction layer inspired by
 [`React.createElement`](https://pt-br.reactjs.org/docs/react-api.html#createelement).
 """
-create_element(type::AbstractString, children...) = create_element(type, (), children...)
-create_element(type::AbstractString, props::Union{AbstractDict,Tuple}, children...) = Node(DEFAULT_HTMLSVG_CONTEXT, type, children, props)
+create_element(type, children...) = create_element(type, (), children...)
+create_element(type, props, children...) = Node(DEFAULT_HTMLSVG_CONTEXT, type, children, props)
 
 process(🍎) = 🍎
 process(v::Union{AbstractVector,Tuple}) = string(process.(v)...)
@@ -63,6 +63,7 @@ toexpr(🍎) = 🍎
     if !isempty(🍍.props)
         props = toexpr(🍍.props)
         if !isempty(🍍.promises)
+            # TODO: this branch has no tests!
             promises = toexpr(🍍.promises)
             props = :(merge($(props), $(promises)...))
         end

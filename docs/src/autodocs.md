@@ -1,11 +1,11 @@
 ```@meta
-CurrentModule = HyperscriptLiteral
+CurrentModule = HTM
 ```
 
 # Docstrings
 
 ```@autodocs
-Modules = [HyperscriptLiteral]
+Modules = [HTM]
 ```
 
 ## Index

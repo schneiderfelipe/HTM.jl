@@ -1,16 +1,16 @@
-using HyperscriptLiteral
+using HTM
 using Documenter
 
-DocMeta.setdocmeta!(HyperscriptLiteral, :DocTestSetup, :(using HyperscriptLiteral); recursive=true)
+DocMeta.setdocmeta!(HTM, :DocTestSetup, :(using HTM); recursive=true)
 
 makedocs(;
-    modules=[HyperscriptLiteral],
+    modules=[HTM],
     authors="Felipe S. S. Schneider <schneider.felipe@posgrad.ufsc.br> and contributors",
-    repo="https://github.com/schneiderfelipe/HyperscriptLiteral.jl/blob/{commit}{path}#{line}",
-    sitename="HyperscriptLiteral.jl",
+    repo="https://github.com/schneiderfelipe/HTM.jl/blob/{commit}{path}#{line}",
+    sitename="HTM.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://schneiderfelipe.github.io/HyperscriptLiteral.jl",
+        canonical="https://schneiderfelipe.github.io/HTM.jl",
         assets=String[],
     ),
     pages=[
@@ -23,5 +23,5 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/schneiderfelipe/HyperscriptLiteral.jl",
+    repo="github.com/schneiderfelipe/HTM.jl",
 )
