@@ -1,6 +1,6 @@
 ```@meta
 DocTestSetup = quote
-    using HyperscriptLiteral
+    using HTM
 
     struct Link{H,C}
         href::H
@@ -12,11 +12,11 @@ end
 
 # Package guide
 
-HyperscriptLiteral.jl provides a single Julia macro, `@htm_str` for generating HTML with a syntax inspired by lit-html and HTM.
-HyperscriptLiteral.jl is a tagged template literal for HTML that interpolates values based on context, allowing automatic escaping and the interpolation of non-serializable values, such as event listeners, style objects, and other HTML nodes and showable objects.
+HTM.jl provides a single Julia macro, `@htm_str` for generating HTML with a syntax inspired by lit-html and HTM.
+HTM.jl is a tagged template literal for HTML that interpolates values based on context, allowing automatic escaping and the interpolation of non-serializable values, such as event listeners, style objects, and other HTML nodes and showable objects.
 
 ```jldoctest
-julia> using HyperscriptLiteral
+julia> using HTM
 
 julia> whom = "🌍!";
 
@@ -70,7 +70,7 @@ And some content, such as event listeners implemented as closures through JSExpr
 
 ## Features (HTML)
 
-HyperscriptLiteral.jl is a tagged template literal that renders the specified markup as an element, text node, or nothing as appropriate.
+HTM.jl is a tagged template literal that renders the specified markup as an element, text node, or nothing as appropriate.
 
 ```jldoctest
 julia> htm"<em>I'm an element!</em>"
@@ -122,7 +122,7 @@ If an attribute value is false, it's as if the attribute hadn't been specified.
 If an attribute value is true, it's equivalent to the empty string.
 
 ```@example
-using HyperscriptLiteral  # hide
+using HTM  # hide
 
 htm"<button disabled=$(true)>Can't click me</button>"
 ```
@@ -135,13 +135,13 @@ If a data value is nothing or missing, nothing is embedded.
 TODO: correct behavior for missing.
 
 ```@example
-using HyperscriptLiteral  # hide
+using HTM  # hide
 
 htm"<button disabled=$(nothing)>Can click me</button>"
 ```
 
 ```@example
-using HyperscriptLiteral  # hide
+using HTM  # hide
 
 htm"<span>There's no $(nothing) here.</span>"
 ```
@@ -158,10 +158,10 @@ MAJOR TODO
 ### Node values
 
 If an interpolated data value is a node, it is inserted into the result at the corresponding location.
-So if you have a function that generates a node (say itself using HyperscriptLiteral.jl), you can embed the result into another HyperscriptLiteral.jl.
+So if you have a function that generates a node (say itself using HTM.jl), you can embed the result into another HTM.jl.
 
 ```@example
-using HyperscriptLiteral  # hide
+using HTM  # hide
 
 emphasize(text) = htm"<em>$(text)</em>"
 
@@ -175,7 +175,7 @@ This is useful for mapping data to content via `map`.
 Typically, you should use html.fragment for the embedded expressions.
 
 ```@example
-using HyperscriptLiteral  # hide
+using HTM  # hide
 
 colorscheme = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
                "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
@@ -203,12 +203,12 @@ julia> htm"<span>It's as easy as $([1, 2, 3]).</span>"
 
 TODO: this will probably be removed
 
-HyperscriptLiteral.jl tolerates malformed input--per the HTML5 specification--but it still tries to be helpful by throwing an error if you interpolate a value into an unexpected place.
+HTM.jl tolerates malformed input--per the HTML5 specification--but it still tries to be helpful by throwing an error if you interpolate a value into an unexpected place.
 
 TODO: this is different from htl
 
 ```@example
-using HyperscriptLiteral  # hide
+using HTM  # hide
 
 tag = "button"
 
@@ -217,10 +217,10 @@ htm"<$(tag)>This does work!</$(tag)>"
 
 ## SVG
 
-You can create contextual SVG fragments using HyperscriptLiteral.jl, too.
+You can create contextual SVG fragments using HTM.jl, too.
 
 ```@example
-using HyperscriptLiteral  # hide
+using HTM  # hide
 
 width, height = 100, 100
 radius = 40
@@ -270,7 +270,7 @@ This can be used to register event listeners.
 TODO: this does not quite work as said (expressions, not functions, are handled).
 
 ```@example
-using HyperscriptLiteral  # hide
+using HTM  # hide
 using JSExpr
 
 htm"""<button onclick=$(@js (() -> alert("Hello 🌍!"))())>Click me</button>"""
@@ -279,7 +279,7 @@ htm"""<button onclick=$(@js (() -> alert("Hello 🌍!"))())>Click me</button>"""
 ### `script` tags
 
 ```@example
-using HyperscriptLiteral  # hide
+using HTM  # hide
 using JSExpr
 
 sval = "Say \"Hello\"!";
@@ -351,5 +351,5 @@ julia> htm"""$(Link("http://example.com", "Some Text"))"""
 ## Guide roadmap
 
 - [ ] Compare with Hyperscript.jl in the documentation.
-- [ ] Using JSExpr.jl with HyperscriptLiteral.jl
+- [ ] Using JSExpr.jl with HTM.jl
 - [ ] Separate things in basics and advanced

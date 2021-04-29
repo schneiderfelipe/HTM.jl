@@ -1,14 +1,14 @@
-# [HyperscriptLiteral.jl](https://github.com/schneiderfelipe/HyperscriptLiteral.jl)
+# [HTM.jl](https://github.com/schneiderfelipe/HTM.jl) (Hyperscript Tagged Markup) for Julia
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://schneiderfelipe.github.io/HyperscriptLiteral.jl/stable)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://schneiderfelipe.github.io/HyperscriptLiteral.jl/dev)
-[![Build Status](https://github.com/schneiderfelipe/HyperscriptLiteral.jl/workflows/CI/badge.svg)](https://github.com/schneiderfelipe/HyperscriptLiteral.jl/actions)
-[![Coverage](https://codecov.io/gh/schneiderfelipe/HyperscriptLiteral.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/schneiderfelipe/HyperscriptLiteral.jl)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://schneiderfelipe.github.io/HTM.jl/stable)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://schneiderfelipe.github.io/HTM.jl/dev)
+[![Build Status](https://github.com/schneiderfelipe/HTM.jl/workflows/CI/badge.svg)](https://github.com/schneiderfelipe/HTM.jl/actions)
+[![Coverage](https://codecov.io/gh/schneiderfelipe/HTM.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/schneiderfelipe/HTM.jl)
 
 A juicy way of writing HTML in Julia. 🍍
 
 ```jldoctest
-julia> using HyperscriptLiteral
+julia> using HTM
 
 julia> whom = "🌍!";
 
@@ -16,7 +16,7 @@ julia> htm"<h1>Hello, $(whom)</h1>"
 <h1>Hello, 🌍&#33;</h1>
 ```
 
-HyperscriptLiteral.jl parses HTML into [Hyperscript.jl](https://github.com/yurivish/Hyperscript.jl) objects.
+HTM.jl parses HTML into [Hyperscript.jl](https://github.com/yurivish/Hyperscript.jl) objects.
 
 This is a work in progress!
 
@@ -25,12 +25,12 @@ TODO: link to issues
 
 ## Installation
 
-HyperscriptLiteral.jl is open-source, small (<250 SLOCs), has no dependencies
+HTM.jl is open-source, small (<250 SLOCs), has no dependencies
 (TODO: currently not true), and can be installed using the Julia package manager.
 From the Julia REPL, type `]` to enter the Pkg REPL mode and run
 
 ```julia
-pkg> add HyperscriptLiteral  # TODO: register package
+pkg> add HTM  # TODO: register package
 ```
 
 ## Roadmap

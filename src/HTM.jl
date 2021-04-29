@@ -1,4 +1,4 @@
-module HyperscriptLiteral
+module HTM
 
 # We say,            Hyperscript.jl says,
 # `tag` or `Tag`      => `Node`
@@ -63,6 +63,7 @@ toexpr(🍎) = 🍎
     if !isempty(🍍.props)
         props = toexpr(🍍.props)
         if !isempty(🍍.promises)
+            # TODO: this branch has no tests!
             promises = toexpr(🍍.promises)
             props = :(merge($(props), $(promises)...))
         end

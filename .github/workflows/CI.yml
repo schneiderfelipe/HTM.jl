@@ -55,9 +55,9 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using HyperscriptLiteral
-            DocMeta.setdocmeta!(HyperscriptLiteral, :DocTestSetup, :(using HyperscriptLiteral); recursive=true)
-            doctest(HyperscriptLiteral)'
+            using HTM
+            DocMeta.setdocmeta!(HTM, :DocTestSetup, :(using HTM); recursive=true)
+            doctest(HTM)'
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

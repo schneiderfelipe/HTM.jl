@@ -39,7 +39,7 @@ git-tree-sha1 = "81690084b6198a2e1da36fcfda16eeca9f9f24e4"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.1"
 
-[[HyperscriptLiteral]]
+[[HTM]]
 path = ".."
 uuid = "5fe4914d-c46a-425a-8229-6c1f1b390250"
 version = "0.1.0"

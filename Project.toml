@@ -1,4 +1,4 @@
-name = "HyperscriptLiteral"
+name = "HTM"
 uuid = "5fe4914d-c46a-425a-8229-6c1f1b390250"
 authors = ["Felipe S. S. Schneider <schneider.felipe@posgrad.ufsc.br> and contributors"]
 version = "0.1.0"
