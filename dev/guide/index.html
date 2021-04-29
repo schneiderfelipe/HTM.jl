@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Guide · HTM.jl</title><link rel="canonical" href="https://schneiderfelipe.github.io/HTM.jl/guide/"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">HTM.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Guide</a><ul class="internal"><li><a class="tocitem" href="#Why-not-concatenate?"><span>Why not concatenate?</span></a></li><li><a class="tocitem" href="#Features-(HTML)"><span>Features (HTML)</span></a></li><li><a class="tocitem" href="#SVG"><span>SVG</span></a></li><li><a class="tocitem" href="#CSS"><span>CSS</span></a></li><li><a class="tocitem" href="#JavaScript"><span>JavaScript</span></a></li><li><a class="tocitem" href="#Components"><span>Components</span></a></li><li><a class="tocitem" href="#Guide-roadmap"><span>Guide roadmap</span></a></li></ul></li><li><a class="tocitem" href="../design/">Design</a></li><li><a class="tocitem" href="../related/">Related packages</a></li><li><a class="tocitem" href="../autodocs/">Docstrings</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Guide</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Guide</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/schneiderfelipe/HTM.jl/blob/master/docs/src/guide.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Package-guide"><a class="docs-heading-anchor" href="#Package-guide">Package guide</a><a id="Package-guide-1"></a><a class="docs-heading-anchor-permalink" href="#Package-guide" title="Permalink"></a></h1><p>HTM.jl provides a single Julia macro, <code>@htm_str</code> for generating HTML with a syntax inspired by lit-html and HTM. HTM.jl is a tagged template literal for HTML that interpolates values based on context, allowing automatic escaping and the interpolation of non-serializable values, such as event listeners, style objects, and other HTML nodes and showable objects.</p><pre><code class="language-julia-repl">julia&gt; using HTM
+
+julia&gt; whom = &quot;🌍!&quot;;
+
+julia&gt; htm&quot;&lt;h1&gt;Hello, $(whom)&lt;/h1&gt;&quot;
+&lt;h1&gt;Hello, 🌍&amp;#33;&lt;/h1&gt;</code></pre><p>What follows is a step-by-step guide of all its functionalities. This guide closely follows the guide for <a href="https://github.com/observablehq/htl">observablehq/htl</a> <sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup>.</p><h2 id="Why-not-concatenate?"><a class="docs-heading-anchor" href="#Why-not-concatenate?">Why not concatenate?</a><a id="Why-not-concatenate?-1"></a><a class="docs-heading-anchor-permalink" href="#Why-not-concatenate?" title="Permalink"></a></h2><p>Surely the simplest way to generate web content is to write HTML. Julia makes it easier to interpolate values into literal HTML thanks to the <code>HTML</code> type:</p><pre><code class="language-julia-repl">julia&gt; whom = &quot;🌍&quot;;
+
+julia&gt; HTML(&quot;&lt;h1&gt;Hello $(whom)&lt;/h1&gt;&quot;)
+HTML{String}(&quot;&lt;h1&gt;Hello 🌍&lt;/h1&gt;&quot;)</code></pre><p>(You can&#39;t use the <code>html&quot;...&quot;</code> syntax here because the <code>@html_str</code> macro doesn&#39;t support interpolation.) Yet simple concatenation has two significant drawbacks.</p><p>First, it confounds markup with text and other content. If an interpolated value happens to include characters that are meaningful markup, the result may render unexpectedly. An ampersand (&amp;) can be interpreted as a character entity reference, for instance.</p><pre><code class="language-julia">value2 = &quot;dollars&amp;pounds&quot;;
+HTML(&quot;My favorite currencies are $(value2).&quot;)</code></pre>My favorite currencies are dollars&pounds.<p>This can be fixed by escaping (say replacing ampersands with the corresponding entity, &amp;amp;). But you must remember to escape every time you interpolate, which is tedious! And it&#39;s easy to forget when many values work as intended without it.</p><pre><code class="language-julia">safe_value2 = replace(&quot;dollars&amp;pounds&quot;, r&quot;&amp;&quot; =&gt; &quot;&amp;amp;&quot;)
+HTML(&quot;My favorite currencies are $(safe_value2).&quot;)</code></pre>My favorite currencies are dollars&amp;pounds.<p>Second, concatenation impedes composition: interpolated content must be serialized as markup. You cannot combine literal HTML with content created by libraries such as Plots.jl. And some content, such as event listeners implemented as closures through JSExpr.jl, can&#39;t be serialized!</p><h2 id="Features-(HTML)"><a class="docs-heading-anchor" href="#Features-(HTML)">Features (HTML)</a><a id="Features-(HTML)-1"></a><a class="docs-heading-anchor-permalink" href="#Features-(HTML)" title="Permalink"></a></h2><p>HTM.jl is a tagged template literal that renders the specified markup as an element, text node, or nothing as appropriate.</p><pre><code class="language-julia-repl">julia&gt; htm&quot;&lt;em&gt;I&#39;m an element!&lt;/em&gt;&quot;
+&lt;em&gt;I&amp;#39;m an element&amp;#33;&lt;/em&gt;</code></pre><pre><code class="language-julia-repl">julia&gt; htm&quot;I&#39;m simply text.&quot;
+&quot;I&#39;m simply text.&quot;</code></pre><pre><code class="language-julia-repl">julia&gt; htm&quot;&quot; === nothing
+true</code></pre><p>If multiple top-level nodes are given, the nodes are returned as a &quot;document fragment&quot; (a tuple).</p><pre><code class="language-julia-repl">julia&gt; htm&quot;I&#39;m a &lt;em&gt;document fragment&lt;/em&gt; (actually a tuple).&quot;
+(&quot;I&#39;m a &quot;, &lt;em&gt;document fragment&lt;/em&gt;, &quot; (actually a tuple).&quot;)</code></pre><h3 id="Automatic-escaping-and-interpolation"><a class="docs-heading-anchor" href="#Automatic-escaping-and-interpolation">Automatic escaping and interpolation</a><a id="Automatic-escaping-and-interpolation-1"></a><a class="docs-heading-anchor-permalink" href="#Automatic-escaping-and-interpolation" title="Permalink"></a></h3><p>If a value is interpolated into an attribute value or data, it is escaped appropriately so as to not change the structure of the surrounding markup. This works thanks to Hyperscript.jl.</p><pre><code class="language-julia-repl">julia&gt; htm&quot;&lt;span&gt;Look, Ma, $(\&quot;&lt;em&gt;automatic escaping&lt;/em&gt;\&quot;)!&lt;/span&gt;&quot;
+&lt;span&gt;Look, Ma, &amp;#60;em&amp;#62;automatic escaping&amp;#60;/em&amp;#62;&amp;#33;&lt;/span&gt;</code></pre><pre><code class="language-julia-repl">julia&gt; htm&quot;&lt;font color=$(\&quot;red\&quot;)&gt;This text has color.&lt;/font&gt;&quot;
+&lt;font color=&quot;red&quot;&gt;This text has color.&lt;/font&gt;</code></pre><p>In cases where it is not possible to interpolate safely, namely with script and style elements where the interpolated value contains the corresponding end tag, an error is thrown.</p><pre><code class="language-julia-repl">julia&gt; htm&quot;&lt;script&gt;$(\&quot;&lt;/script&gt;\&quot;)&lt;/script&gt;&quot;  # BUG: not what should happen
+&lt;script&gt;&amp;#60;/script&amp;#62;&lt;/script&gt;</code></pre><h3 id="Boolean-attributes"><a class="docs-heading-anchor" href="#Boolean-attributes">Boolean attributes</a><a id="Boolean-attributes-1"></a><a class="docs-heading-anchor-permalink" href="#Boolean-attributes" title="Permalink"></a></h3><p>If an attribute value is false, it&#39;s as if the attribute hadn&#39;t been specified. If an attribute value is true, it&#39;s equivalent to the empty string.</p><pre><code class="language-julia">htm&quot;&lt;button disabled=$(true)&gt;Can&#39;t click me&lt;/button&gt;&quot;</code></pre><button disabled>Can&#39;t click me</button><h3 id="Optional-values"><a class="docs-heading-anchor" href="#Optional-values">Optional values</a><a id="Optional-values-1"></a><a class="docs-heading-anchor-permalink" href="#Optional-values" title="Permalink"></a></h3><p>If an attribute value is nothing or missing, it&#39;s as if the attribute hadn&#39;t been specified. If a data value is nothing or missing, nothing is embedded.</p><p>TODO: correct behavior for missing.</p><pre><code class="language-julia">htm&quot;&lt;button disabled=$(nothing)&gt;Can click me&lt;/button&gt;&quot;</code></pre><button>Can click me</button><pre><code class="language-julia">htm&quot;&lt;span&gt;There&#39;s no $(nothing) here.&lt;/span&gt;&quot;</code></pre><span>There&#39;s no  here.</span><pre><code class="language-julia-repl">julia&gt; htm&quot;$(htm\&quot;\&quot;)&quot; === nothing  # It&#39;s nothings all the way down!
+true</code></pre><h3 id="Spread-attributes"><a class="docs-heading-anchor" href="#Spread-attributes">Spread attributes</a><a id="Spread-attributes-1"></a><a class="docs-heading-anchor-permalink" href="#Spread-attributes" title="Permalink"></a></h3><p>MAJOR TODO</p><h3 id="Node-values"><a class="docs-heading-anchor" href="#Node-values">Node values</a><a id="Node-values-1"></a><a class="docs-heading-anchor-permalink" href="#Node-values" title="Permalink"></a></h3><p>If an interpolated data value is a node, it is inserted into the result at the corresponding location. So if you have a function that generates a node (say itself using HTM.jl), you can embed the result into another HTM.jl.</p><pre><code class="language-julia">emphasize(text) = htm&quot;&lt;em&gt;$(text)&lt;/em&gt;&quot;
+
+htm&quot;&lt;span&gt;This is $(emphasize(\&quot;really\&quot;)) important.&lt;/span&gt;&quot;</code></pre><span>This is <em>really</em> important.</span><h3 id="Iterable-values"><a class="docs-heading-anchor" href="#Iterable-values">Iterable values</a><a id="Iterable-values-1"></a><a class="docs-heading-anchor-permalink" href="#Iterable-values" title="Permalink"></a></h3><p>You can interpolate iterables into data, too, even iterables of nodes. This is useful for mapping data to content via <code>map</code>. Typically, you should use html.fragment for the embedded expressions.</p><pre><code class="language-julia">colorscheme = [&quot;#1f77b4&quot;, &quot;#ff7f0e&quot;, &quot;#2ca02c&quot;, &quot;#d62728&quot;, &quot;#9467bd&quot;,
+               &quot;#8c564b&quot;, &quot;#e377c2&quot;, &quot;#7f7f7f&quot;, &quot;#bcbd22&quot;, &quot;#17becf&quot;]
+
+rows = map(enumerate(colorscheme)) do (i, color)
+    htm&quot;&lt;tr&gt;
+        &lt;td&gt;$(i)&lt;/td&gt;
+        &lt;td&gt;$(color)&lt;/td&gt;
+        &lt;td style=\&quot;background: $(color);\&quot;&gt;&lt;/td&gt;
+    &lt;/tr&gt;&quot;
+end
+
+htm&quot;&quot;&quot;&lt;table&gt;
+    &lt;thead&gt;&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Color&lt;/th&gt;&lt;th&gt;Swatch&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+    &lt;tbody&gt;$(rows)&lt;/tbody&gt;
+&lt;/table&gt;&quot;&quot;&quot;</code></pre><table>
+    <thead><tr><th>#</th><th>Color</th><th>Swatch</th></tr></thead>
+    <tbody><tr>
+        <td>1</td>
+        <td>#1f77b4</td>
+        <td style="background: #1f77b4;"></td>
+    </tr><tr>
+        <td>2</td>
+        <td>#ff7f0e</td>
+        <td style="background: #ff7f0e;"></td>
+    </tr><tr>
+        <td>3</td>
+        <td>#2ca02c</td>
+        <td style="background: #2ca02c;"></td>
+    </tr><tr>
+        <td>4</td>
+        <td>#d62728</td>
+        <td style="background: #d62728;"></td>
+    </tr><tr>
+        <td>5</td>
+        <td>#9467bd</td>
+        <td style="background: #9467bd;"></td>
+    </tr><tr>
+        <td>6</td>
+        <td>#8c564b</td>
+        <td style="background: #8c564b;"></td>
+    </tr><tr>
+        <td>7</td>
+        <td>#e377c2</td>
+        <td style="background: #e377c2;"></td>
+    </tr><tr>
+        <td>8</td>
+        <td>#7f7f7f</td>
+        <td style="background: #7f7f7f;"></td>
+    </tr><tr>
+        <td>9</td>
+        <td>#bcbd22</td>
+        <td style="background: #bcbd22;"></td>
+    </tr><tr>
+        <td>10</td>
+        <td>#17becf</td>
+        <td style="background: #17becf;"></td>
+    </tr></tbody>
+</table><pre><code class="language-julia-repl">julia&gt; htm&quot;&lt;span&gt;It&#39;s as easy as $([1, 2, 3]).&lt;/span&gt;&quot;
+&lt;span&gt;It&amp;#39;s as easy as 123.&lt;/span&gt;</code></pre><h3 id="Errors-on-invalid-bindings"><a class="docs-heading-anchor" href="#Errors-on-invalid-bindings">Errors on invalid bindings</a><a id="Errors-on-invalid-bindings-1"></a><a class="docs-heading-anchor-permalink" href="#Errors-on-invalid-bindings" title="Permalink"></a></h3><p>TODO: this will probably be removed</p><p>HTM.jl tolerates malformed input–per the HTML5 specification–but it still tries to be helpful by throwing an error if you interpolate a value into an unexpected place.</p><p>TODO: this is different from htl</p><pre><code class="language-julia">tag = &quot;button&quot;
+
+htm&quot;&lt;$(tag)&gt;This does work!&lt;/$(tag)&gt;&quot;</code></pre><button>This does work&#33;</button><h2 id="SVG"><a class="docs-heading-anchor" href="#SVG">SVG</a><a id="SVG-1"></a><a class="docs-heading-anchor-permalink" href="#SVG" title="Permalink"></a></h2><p>You can create contextual SVG fragments using HTM.jl, too.</p><pre><code class="language-julia">width, height = 100, 100
+radius = 40
+color = &quot;red&quot;
+
+htm&quot;&lt;svg width=$(width) height=$(height)&gt;
+  $(htm\&quot;&lt;circle
+            cx=$(width / 2)
+            cy=$(height / 2)
+            r=$radius
+            fill=$color
+         &gt;&lt;/circle&gt;\&quot;)
+&lt;/svg&gt;&quot;</code></pre><svg height="100" width="100">
+  <circle cy="50.0" r="40" fill="red" cx="50.0" />
+</svg><h2 id="CSS"><a class="docs-heading-anchor" href="#CSS">CSS</a><a id="CSS-1"></a><a class="docs-heading-anchor-permalink" href="#CSS" title="Permalink"></a></h2><h3 id="Inline-styles"><a class="docs-heading-anchor" href="#Inline-styles">Inline styles</a><a id="Inline-styles-1"></a><a class="docs-heading-anchor-permalink" href="#Inline-styles" title="Permalink"></a></h3><p>You can interpolate into a style attribute as a string, but use caution: automatic escaping will still allow you to set multiple style properties this way, or to generate invalid CSS.</p><pre><code class="language-julia-repl">julia&gt; htm&quot;&quot;&quot;&lt;span style=&quot;background: $(&quot;yellow; font-style: italic&quot;);&quot;&gt;It&#39;s yellow (and italic).&lt;/span&gt;&quot;&quot;&quot;
+&lt;span style=&quot;background: yellow; font-style: italic;&quot;&gt;It&amp;#39;s yellow &amp;#40;and italic&amp;#41;.&lt;/span&gt;</code></pre><p>TODO: the following requires special treatment, doesn&#39;t currently work as indicated.</p><p>You can safely interpolate into style properties, too, by specifying the style attribute as a <code>Dict</code>:</p><pre><code class="language-julia-repl">julia&gt; htm&quot;&quot;&quot;&lt;span style=$(Dict(&quot;background&quot; =&gt; &quot;yellow&quot;))&gt;It&#39;s all yellow!&lt;/span&gt;&quot;&quot;&quot;
+&lt;span style=&quot;Dict{String, Any}(&amp;#34;background&amp;#34; =&amp;#62; &amp;#34;yellow&amp;#34;)&quot;&gt;It&amp;#39;s all yellow&amp;#33;&lt;/span&gt;</code></pre><h3 id="style-tags"><a class="docs-heading-anchor" href="#style-tags"><code>style</code> tags</a><a id="style-tags-1"></a><a class="docs-heading-anchor-permalink" href="#style-tags" title="Permalink"></a></h3><p>TODO</p><h2 id="JavaScript"><a class="docs-heading-anchor" href="#JavaScript">JavaScript</a><a id="JavaScript-1"></a><a class="docs-heading-anchor-permalink" href="#JavaScript" title="Permalink"></a></h2><h3 id="Function-attributes"><a class="docs-heading-anchor" href="#Function-attributes">Function attributes</a><a id="Function-attributes-1"></a><a class="docs-heading-anchor-permalink" href="#Function-attributes" title="Permalink"></a></h3><p>If an attribute value is a function, it is assigned as a property. This can be used to register event listeners.</p><p>TODO: this does not quite work as said (expressions, not functions, are handled).</p><pre><code class="language-">using HTM  # hide
+using JSExpr
+
+htm&quot;&quot;&quot;&lt;button onclick=$(@js (() -&gt; alert(&quot;Hello 🌍!&quot;))())&gt;Click me&lt;/button&gt;&quot;&quot;&quot;</code></pre><h3 id="script-tags"><a class="docs-heading-anchor" href="#script-tags"><code>script</code> tags</a><a id="script-tags-1"></a><a class="docs-heading-anchor-permalink" href="#script-tags" title="Permalink"></a></h3><pre><code class="language-">using HTM  # hide
+using JSExpr
+
+sval = &quot;Say \&quot;Hello\&quot;!&quot;;
+
+# TODO: this requires not escaping script tags
+
+htm&quot;&lt;script&gt;$(@js begin
+    @var x = $sval
+    alert(x)
+end)&lt;/script&gt;&quot;</code></pre><pre><code class="language-none">&lt;script&gt;
+    // Should be
+    var x = &quot;Say \&quot;Hello\&quot;!&quot;;
+    alert(x);
+&lt;/script&gt;</code></pre><h2 id="Components"><a class="docs-heading-anchor" href="#Components">Components</a><a id="Components-1"></a><a class="docs-heading-anchor-permalink" href="#Components" title="Permalink"></a></h2><p>Julia <em>already</em> has a component concept: it is called the display convention. You just have to have <code>Base.show</code> overloaded for <code>text/html</code> (and maybe <code>text/plain</code>).</p><p>Especifically, the way of doing components is through functions and structures. A function could work as follows:</p><pre><code class="language-julia-repl">julia&gt; mycomponent(name) = htm&quot;&lt;div&gt;My name is $(name).&lt;/div&gt;&quot;
+mycomponent (generic function with 1 method)
+
+julia&gt; const app = htm&quot;$(mycomponent(\&quot;John Doe\&quot;))&quot;
+&lt;div&gt;My name is John Doe.&lt;/div&gt;</code></pre><p>For a structure, you would to overload <code>Base.show</code> for <code>text/html</code>:</p><pre><code class="language-julia-repl">julia&gt; struct Link{H,C}
+           href::H
+           children::C
+       end
+
+julia&gt; Base.show(io::IO, mime::MIME&quot;text/html&quot;, a::Link) =
+           show(io, mime, htm&quot;&lt;a href=$(a.href)&gt;$(a.children)&lt;/a&gt;&quot;)
+
+julia&gt; htm&quot;&quot;&quot;&lt;em&gt;$(Link(&quot;http://bit.ly/htm-jl&quot;, &quot;HTM.jl&quot;))&lt;/em&gt;&quot;&quot;&quot;
+&lt;em&gt;&lt;a href=&quot;http://bit.ly/htm-jl&quot;&gt;HTM.jl&lt;/a&gt;&lt;/em&gt;</code></pre><p>If your object is the single one parsed, <code>Base.show</code>  for <code>text/plain</code> will be called. You can adjust the printing in this case by overloading <code>Base.show</code> for this, maybe falling back to the one above:</p><pre><code class="language-julia-repl">julia&gt; htm&quot;&quot;&quot;$(Link(&quot;http://bit.ly/htm-jl&quot;, &quot;HTM.jl&quot;))&quot;&quot;&quot;
+Link{String, String}(&quot;http://bit.ly/htm-jl&quot;, &quot;HTM.jl&quot;)
+
+julia&gt; Base.show(io::IO, mime::MIME&quot;text/plain&quot;, a::Link) =
+           show(io, MIME(&quot;text/html&quot;), a)
+
+julia&gt; htm&quot;&quot;&quot;$(Link(&quot;http://example.com&quot;, &quot;Some Text&quot;))&quot;&quot;&quot;
+&lt;a href=&quot;http://example.com&quot;&gt;Some Text&lt;/a&gt;</code></pre><h2 id="Guide-roadmap"><a class="docs-heading-anchor" href="#Guide-roadmap">Guide roadmap</a><a id="Guide-roadmap-1"></a><a class="docs-heading-anchor-permalink" href="#Guide-roadmap" title="Permalink"></a></h2><ul><li>[ ] Compare with Hyperscript.jl in the documentation.</li><li>[ ] Using JSExpr.jl with HTM.jl</li><li>[ ] Separate things in basics and advanced</li></ul><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a><a href="https://observablehq.com/@observablehq/htl">A guide for observablehq/htl</a></li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../design/">Design »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 29 April 2021 05:22">Thursday 29 April 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
