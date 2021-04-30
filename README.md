@@ -48,11 +48,11 @@ and [Hypertext Literal](https://observablehq.com/@observablehq/htl):.
 - Self-closing tags: `htm"<div />"`
 - Multiple root elements (fragments): `htm"<div /><div />"`
 - Boolean attributes: `htm"<div draggable />"` or `htm"<div draggable=$(true) />"`
-- HTML's optional quotes: `htm"<div class=foo></div>"`
+- HTML's optional quotes: `htm"<div class=fruit></div>"`
 
 Furthermore, the component concept is supported through
 [Julia's display system](https://docs.julialang.org/en/v1/base/io-network/#Multimedia-I/O):
-`htm"$(Foo())"`.
+`htm"$(Fruit(\"pineapple\", '🍍'))"`.
 
 ## Installation
 
@@ -65,11 +65,12 @@ pkg> add https://github.com/schneiderfelipe/HTM.jl
 
 ## Usage
 
-See the documentation for more.
+See the documentation for more (I hope you like pineapples).
 
 ## Project status
 
 HTM.jl is a small (<300 lines of code) open-source Julia project.
+It was once called JSX.jl.
 Its main goal is to create a fully-featured, backend-agnostic alternative to the
 `@html_str` macro.
 We also want `@md_str`-like string interpolations, JSX-like syntax, and full
