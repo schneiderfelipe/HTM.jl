@@ -146,13 +146,12 @@ julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."
 @inline parseelems(predicate, io::IO) = parseelems!(predicate, io, [])
 @inline function parseelems!(predicate, io::IO, elems::Union{AbstractVector,Tuple})
     while !eof(io) && predicate(io)
-        skipchars(isspace, io)
         pushelem!(elems, parseelem(io))
     end
     return elems
 end
 pushelem!(elems::AbstractVector, elem) = push!(elems, elem)
-pushelem!(elems::AbstractVector, elem::AbstractString) = isempty(elem) || push!(elems, elem)
+pushelem!(elems::AbstractVector, elem::AbstractString) = isempty(elem) || all(isspace, elem) || push!(elems, elem)  # TODO: we could detect all spaces as we read for performance
 
 @doc raw"""
     parseelem(io::IO)

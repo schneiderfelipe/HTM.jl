@@ -74,7 +74,7 @@ using Test
             <div class=fruit>
                 🍍
             </div>
-        """ |> render == "<div class=\"fruit\">🍍\n    </div>"
+        """ |> render == "<div class=\"fruit\">\n        🍍\n    </div>"
     end
 
     @testset "Interpolations" begin
