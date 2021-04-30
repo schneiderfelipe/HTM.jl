@@ -10,6 +10,8 @@ export create_element
 export process
 export @htm_str
 
+const UNIVERSALENDTAG = "<//>"
+
 include("utils.jl")
 
 """
@@ -181,9 +183,9 @@ HTM.Tag{String, Dict{Any, Any}, Vector{String}, Vector{Any}}("div", Dict{Any, An
         skipchars(isequal('>'), io)
         return Tag(type, props, promises)
     end
-    endtag = "</$(type)>"
-    children = parseelems(io -> !startswith(io, endtag), io)
-    skipstartswith(io, endtag) || error("tag not properly closed")
+    endtag = "</$(process(type))>"
+    children = parseelems(io -> !(startswith(io, endtag) || startswith(io, UNIVERSALENDTAG)), io)
+    skipstartswith(io, endtag) || skipstartswith(io, UNIVERSALENDTAG) || error("tag not properly closed")
     return Tag(type, props, promises, children)
 end
 

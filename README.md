@@ -49,6 +49,7 @@ and [Hypertext Literal](https://observablehq.com/@observablehq/htl):.
 - Multiple root elements (fragments): `htm"<div /><div />"`
 - Boolean attributes: `htm"<div draggable />"` or `htm"<div draggable=$(true) />"`
 - HTML's optional quotes: `htm"<div class=fruit></div>"`
+- Universal end-tags: `htm"<div>🍍<//>"`
 
 Furthermore, the component concept is supported through
 [Julia's display system](https://docs.julialang.org/en/v1/base/io-network/#Multimedia-I/O):
