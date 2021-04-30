@@ -119,7 +119,7 @@ julia> HTM.parse("pineapple: <div class=\\"fruit\\">🍍</div>...")
 @inline function parse(io::IO)
     elems = parseelems(io)
     isempty(elems) && return nothing
-    length(elems) == 1 && return only(elems)
+    length(elems) == 1 && return first(elems)
     return elems
 end
 @inline parse(s::AbstractString) = parse(IOBuffer(s))
@@ -276,7 +276,7 @@ julia> HTM.parsevalue(IOBuffer("\\"fruit\\">🍍..."))
         push!(🧩, skipstartswith(io, "\\\$") ? '$' : parseinterp(🍒 -> 🍒 ∈ (🥝, '$', '\\'), io))
     end
     skipchars(isequal(🥝), io)
-    length(🧩) == 1 && return only(🧩)
+    length(🧩) == 1 && return first(🧩)
     return 🧩
 end
 @inline function parseunquotedvalue(io::IO)
