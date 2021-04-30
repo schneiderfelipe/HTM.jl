@@ -13,7 +13,6 @@ export @htm_str
 include("utils.jl")
 
 """
-    create_element(type[, children...])
     create_element(type, props[, children...])
 
 Create a Hyperscript.jl element.
@@ -21,8 +20,12 @@ Create a Hyperscript.jl element.
 This is an alternative syntax and (currently) serves as a rather trivial
 absctraction layer inspired by
 [`React.createElement`](https://pt-br.reactjs.org/docs/react-api.html#createelement).
+
+```jldoctest
+julia> create_element("div", Dict("class" => "fruit"), "🍍")
+<div class="fruit">🍍</div>
+```
 """
-create_element(type, children...) = create_element(type, (), children...)
 create_element(type, props, children...) = Node(DEFAULT_HTMLSVG_CONTEXT, type, children, props)
 
 process(🍎) = 🍎
@@ -40,6 +43,11 @@ isenabled(::Nothing) = false
     Tag(type, props[, promises=(), children=()])
 
 Compile time internal representation of an HTML tag.
+
+```jldoctest
+julia> HTM.Tag("div", Dict("class" => "fruit"), (), ("🍍",))
+HTM.Tag{String, Dict{String, String}, Tuple{}, Tuple{String}}("div", Dict("class" => "fruit"), (), ("🍍",))
+```
 """
 struct Tag{T<:Union{AbstractString,Tuple},A<:AbstractDict,P<:Union{AbstractVector,Tuple},C<:Union{AbstractVector,Tuple}}
     type::T
@@ -90,11 +98,19 @@ end
 @inline toexpr(d::AbstractDict) = :(Dict($(toexpr(collect(d)))))
 @inline toexpr(p::Pair) = :($(toexpr(first(p))) => $(toexpr(last(p))))
 
-"""
-    parse(io::IO)
+@doc raw"""
     parse(s::AbstractString)
+    parse(io::IO)
 
 Parse HTML.
+
+```jldoctest
+julia> HTM.parse("pineapple: <div class=\\"fruit\\">🍍</div>...")
+3-element Vector{Any}:
+ "pineapple: "
+ HTM.Tag{String, Dict{Any, Any}, Vector{String}, Vector{Any}}("div", Dict{Any, Any}("class" => "fruit"), String[], Any["🍍"])
+ "..."
+```
 """
 @inline function parse(io::IO)
     elems = parseelems(io)
@@ -106,13 +122,21 @@ end
 
 # --- HTML specification ---
 
-"""
+@doc raw"""
     parseelems(io::IO)
 
 Parse HTML elements.
 
 This function is the entry point for an implementation of a subset of the
 [HTML standard](https://html.spec.whatwg.org/multipage/parsing.html#tokenization).
+
+```jldoctest
+julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."))
+3-element Vector{Any}:
+ "pineapple: "
+ HTM.Tag{String, Dict{Any, Any}, Vector{String}, Vector{Any}}("div", Dict{Any, Any}("class" => "fruit"), String[], Any["🍍"])
+ "..."
+```
 """
 @inline parseelems(io::IO) = parseelems(io -> true, io)
 @inline parseelems(predicate, io::IO) = parseelems!(predicate, io, [])
@@ -123,10 +147,15 @@ This function is the entry point for an implementation of a subset of the
     return elems
 end
 
-"""
+@doc raw"""
     parseelem(io::IO)
 
 Parse a single HTML element.
+
+```jldoctest
+julia> HTM.parseelem(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."))
+"pineapple: "
+```
 """
 @inline function parseelem(io::IO)
     startswith(io, '<') && return parsetag(io)
@@ -134,10 +163,15 @@ Parse a single HTML element.
     return parseinterp(🍒 -> 🍒 ∈ ('<', '$', '\\'), io)
 end
 
-"""
+@doc raw"""
     parsetag(io::IO)
 
 Parse a `Tag` object.
+
+```jldoctest
+julia> HTM.parsetag(IOBuffer("<div class=\\"fruit\\">🍍</div>..."))
+HTM.Tag{String, Dict{Any, Any}, Vector{String}, Vector{Any}}("div", Dict{Any, Any}("class" => "fruit"), String[], Any["🍍"])
+```
 """
 @inline function parsetag(io::IO)
     skipchars(isequal('<'), io)
@@ -153,17 +187,32 @@ Parse a `Tag` object.
     return Tag(type, props, promises, children)
 end
 
-"""
+@doc raw"""
     parsetagtype(io::IO)
 
 Parse an HTML tag type.
 """
 @inline parsetagtype(io::IO) = readuntil(🍒 -> isspace(🍒) || 🍒 ∈ ('>', '/'), io)
 
+```jldoctest
+julia> HTM.parsetagtype(IOBuffer("div class=\\"fruit\\">🍍..."))
+"div"
+```
 """
+
+@doc raw"""
     parseprops(io::IO)
 
 Parse HTML properties of a tag.
+The returned tuple contains both true properties and promisses.
+
+```jldoctest
+julia> HTM.parseprops(IOBuffer("class=\\"fruit\\">🍍..."))
+(Dict{Any, Any}("class" => "fruit"), String[])
+
+julia> HTM.parseprops(IOBuffer("class=\\"fruit\\" \$(props)>🍍..."))
+(Dict{Any, Any}("class" => "fruit"), ["\$(props)"])
+```
 """
 @inline parseprops(io::IO) = parseprops!(io, Dict(), String[])
 @inline function parseprops!(io::IO, props::AbstractDict, promises::Union{AbstractVector,Tuple})
@@ -184,17 +233,27 @@ end
     return props
 end
 
-"""
+@doc raw"""
     parsekey(io::IO)
 
 Parse an HTML property key.
+
+```jldoctest
+julia> HTM.parsekey(IOBuffer("class=\\"fruit\\">🍍..."))
+"class"
+```
 """
 @inline parsekey(io::IO) = readuntil(🍒 -> isspace(🍒) || 🍒 ∈ ('=', '>', '/'), io)
 
-"""
+@doc raw"""
     parsevalue(io::IO)
 
 Parse an HTML property value.
+
+```jldoctest
+julia> HTM.parsevalue(IOBuffer("\\"fruit\\">🍍..."))
+"fruit"
+```
 """
 @inline parsevalue(io::IO) = (skipchars(isspace, io); startswith(io, ('"', '\'')) ? parsequotedvalue(io) : parseunquotedvalue(io))
 @inline function parsequotedvalue(io::IO)
@@ -213,7 +272,7 @@ end
     end
 end
 
-raw"""
+@doc raw"""
     parseinterp(io::IO)
     parseinterp(fallback, io::IO)
 
@@ -222,6 +281,11 @@ Parse an interpolation as string, including `$`.
 The input must start with `$` if no fallback function is given.
 The fallback function is passed to `readuntil` if the input does not start
 with `$`.
+
+```jldoctest
+julia> HTM.parseinterp(IOBuffer(raw"$((1, (2, 3)))..."))
+"\$((1, (2, 3)))"
+```
 """
 @inline function parseinterp(io::IO)
     buf = IOBuffer()
