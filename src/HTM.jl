@@ -146,10 +146,13 @@ julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."
 @inline parseelems(predicate, io::IO) = parseelems!(predicate, io, [])
 @inline function parseelems!(predicate, io::IO, elems::Union{AbstractVector,Tuple})
     while !eof(io) && predicate(io)
-        push!(elems, parseelem(io))
+        skipchars(isspace, io)
+        pushelem!(elems, parseelem(io))
     end
     return elems
 end
+pushelem!(elems::AbstractVector, elem) = push!(elems, elem)
+pushelem!(elems::AbstractVector, elem::AbstractString) = isempty(elem) || push!(elems, elem)
 
 @doc raw"""
     parseelem(io::IO)
@@ -265,7 +268,7 @@ julia> HTM.parsevalue(IOBuffer("\\"fruit\\">🍍..."))
 "fruit"
 ```
 """
-@inline parsevalue(io::IO) = (skipchars(isspace, io); startswith(io, ('"', '\'')) ? parsequotedvalue(io) : parseunquotedvalue(io))
+@inline parsevalue(io::IO) = startswith(io, ('"', '\'')) ? parsequotedvalue(io) : parseunquotedvalue(io)
 @inline function parsequotedvalue(io::IO)
     🥝 = read(io, Char)
     🧩 = []

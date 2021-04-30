@@ -70,14 +70,11 @@ using Test
     end
 
     @testset "Whitespace" begin
-        # TODO
-        @test_broken htm"""
-            <div class="warning">
-                Warning!
+        @test htm"""
+            <div class=fruit>
+                🍍
             </div>
-        """ == htm"""<div class="warning">
-            Warning!
-        </div>"""
+        """ |> render == "<div class=\"fruit\">🍍\n    </div>"
     end
 
     @testset "Interpolations" begin
