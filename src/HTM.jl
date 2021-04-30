@@ -33,9 +33,9 @@ create_element(type, props, children...) = Node(DEFAULT_HTMLSVG_CONTEXT, type, c
 @inline processtagname(x) = string(process(x))
 
 process(🍎) = 🍎
+process(b::Bool) = b ? nothing : error("should have been disabled")
 process(v::Union{AbstractVector,Tuple}) = string(process.(v)...)
 process(d::AbstractDict) = Dict{String,Any}(process(k) => process(v) for (k, v) ∈ d if isenabled(v))
-process(b::Bool) = b ? nothing : error("should have been disabled")
 
 # We hide props if `false` or `nothing`, Hyperscript.jl uses `nothing` to
 # mean something else (empty prop).
@@ -70,7 +70,7 @@ end
 toexpr(🍎) = 🍎
 @inline function toexpr(🍍::Tag)
     type = toexpr(🍍.type)
-    type isa AbstractString || (type = :(processtagname($(type))))
+    type isa AbstractString || (type = :(processtagname($(type))))  # TODO: create a function barrier here
 
     if !isempty(🍍.props)
         props = toexpr(🍍.props)
@@ -99,8 +99,8 @@ toexpr(🍎) = 🍎
 end
 @inline toexpr(s::AbstractString) = startswith(s, '$') ? Meta.parse(s[nextind(s, begin):end]) : s
 @inline toexpr(v::Union{AbstractVector,Tuple}) = :(($(toexpr.(v)...),))
-@inline toexpr(d::AbstractDict) = :(Dict($(toexpr(collect(d)))))
 @inline toexpr(p::Pair) = :($(toexpr(first(p))) => $(toexpr(last(p))))
+@inline toexpr(d::AbstractDict) = :(Dict($(toexpr(collect(d)))))
 
 @doc raw"""
     parse(s::AbstractString)
