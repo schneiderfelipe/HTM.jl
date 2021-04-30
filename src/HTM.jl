@@ -7,7 +7,7 @@ module HTM
 using Hyperscript: Node, DEFAULT_HTMLSVG_CONTEXT
 
 export create_element
-export process
+export processtagname, process
 export @htm_str
 
 const UNIVERSALENDTAG = "<//>"
@@ -30,6 +30,8 @@ julia> create_element("div", Dict("class" => "fruit"), "🍍")
 """
 create_element(type, props, children...) = Node(DEFAULT_HTMLSVG_CONTEXT, type, children, props)
 
+@inline processtagname(x) = string(process(x))
+
 process(🍎) = 🍎
 process(v::Union{AbstractVector,Tuple}) = string(process.(v)...)
 process(d::AbstractDict) = Dict{String,Any}(process(k) => process(v) for (k, v) ∈ d if isenabled(v))
@@ -51,7 +53,7 @@ julia> HTM.Tag("div", Dict("class" => "fruit"), (), ("🍍",))
 HTM.Tag{String, Dict{String, String}, Tuple{}, Tuple{String}}("div", Dict("class" => "fruit"), (), ("🍍",))
 ```
 """
-struct Tag{T<:Union{AbstractString,Tuple},A<:AbstractDict,P<:Union{AbstractVector,Tuple},C<:Union{AbstractVector,Tuple}}
+struct Tag{T<:Union{AbstractString,AbstractVector,Tuple},A<:AbstractDict,P<:Union{AbstractVector,Tuple},C<:Union{AbstractVector,Tuple}}
     type::T
     props::A
     promises::P
@@ -68,7 +70,7 @@ end
 toexpr(🍎) = 🍎
 @inline function toexpr(🍍::Tag)
     type = toexpr(🍍.type)
-    type isa AbstractString || (type = :(process($(type))))
+    type isa AbstractString || (type = :(processtagname($(type))))
 
     if !isempty(🍍.props)
         props = toexpr(🍍.props)
@@ -177,13 +179,13 @@ HTM.Tag{String, Dict{Any, Any}, Vector{String}, Vector{Any}}("div", Dict{Any, An
 """
 @inline function parsetag(io::IO)
     skipchars(isequal('<'), io)
-    type = skipstartswith(io, "\\\$") ? ('$', parsetagtype(io)) : parsetagtype(io)
+    type = parsetagtype(io)
     props, promises = parseprops(io)
     if read(io, Char) === '/'
         skipchars(isequal('>'), io)
         return Tag(type, props, promises)
     end
-    endtag = "</$(process(type))>"
+    endtag = "</$(processtagname(type))>"
     children = parseelems(io -> !(startswith(io, endtag) || startswith(io, UNIVERSALENDTAG)), io)
     skipstartswith(io, endtag) || skipstartswith(io, UNIVERSALENDTAG) || error("tag not properly closed")
     return Tag(type, props, promises, children)
@@ -193,14 +195,20 @@ end
     parsetagtype(io::IO)
 
 Parse an HTML tag type.
-"""
-@inline parsetagtype(io::IO) = readuntil(🍒 -> isspace(🍒) || 🍒 ∈ ('>', '/'), io)
 
 ```jldoctest
 julia> HTM.parsetagtype(IOBuffer("div class=\\"fruit\\">🍍..."))
 "div"
 ```
 """
+@inline function parsetagtype(io::IO)
+    🧩 = Union{Char,String}[]  # TODO: if we make this String[], we get ~20% parse performance improvement!
+    while !(eof(io) || (🍒 = peek(io, Char)) |> isspace || 🍒 ∈ ('>', '/'))
+        push!(🧩, skipstartswith(io, "\\\$") ? '$' : parseinterp(🍒 -> isspace(🍒) || 🍒 ∈ ('>', '/', '$', '\\'), io))
+    end
+    length(🧩) == 1 && return first(🧩)
+    return 🧩
+end
 
 @doc raw"""
     parseprops(io::IO)
