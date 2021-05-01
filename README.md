@@ -22,7 +22,7 @@ It is backend-agnostic but uses
 julia> dump(b, maxdepth=1)
 Hyperscript.Node{Hyperscript.HTMLSVG}
   context: Hyperscript.HTMLSVG
-  node: String "div"
+  tag: String "div"
   children: Array{Any}((1,))
   attrs: Dict{String, Any}
 ```

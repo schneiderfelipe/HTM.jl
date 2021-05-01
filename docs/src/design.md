@@ -45,8 +45,10 @@ julia> @macroexpand htm"<span />"
 The parsing processing is actually fast too:
 
 ```julia-repl
+julia> using BenchmarkTools  # hide
+
 julia> @btime HTM.parse("<span />");
-  866.435 ns (24 allocations: 1.19 KiB)
+  800.222 ns (24 allocations: 1.19 KiB)
 ```
 
 And unlike regular string interpolation, HTM.jl directly creates content rather than reusable templates.

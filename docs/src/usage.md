@@ -32,7 +32,7 @@ What follows is a step-by-step guide of its main features.
 
 ## Basic features
 
-HTM.jl parses markup as nodes, `String`, or `nothing`:
+HTM.jl parses markup as nodes, `String` (or objects in general), or `nothing`:
 
 ```jldoctest
 julia> htm"<div>🍍</div>"
@@ -134,7 +134,7 @@ You can interpolate iterables into data, too, even iterables of elements:
 ```@example
 using HTM  # hide
 
-htm"<p><strong>It's as easy as $([1, 2, 3])</strong></p>"
+htm"<p><strong>Easy as $([1, 2, 3])</strong></p>"
 ```
 
 That is useful for mapping data to content via
@@ -155,7 +155,7 @@ rows = map(enumerate(colormap("Oranges", 5))) do (i, color)
 end
 
 header = htm"""<tr>
-    $(htm"<th>$(name)</th>" for name in ["#", "Color", "Swatch"])
+    $(htm"<th>$(column)</th>" for column in ["#", "Color", "Swatch"])
 </tr>"""
 
 htm"""<table>
