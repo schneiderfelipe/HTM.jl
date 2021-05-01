@@ -3,7 +3,7 @@ module HTM
 using Hyperscript
 
 export create_element
-export processtag, process
+export processtag, processattr, processchild
 export @htm_str
 
 const UNIVERSALENDTAG = "<//>"
@@ -24,23 +24,30 @@ julia> create_element("div", Dict("class" => "fruit"), "🍍")
 <div class="fruit">🍍</div>
 ```
 """
-create_element(tag, attrs, children...) = Hyperscript.Node(Hyperscript.DEFAULT_HTMLSVG_CONTEXT, tag, children, attrs)
+@inline create_element(tag, attrs, children...) = Hyperscript.Node(Hyperscript.DEFAULT_HTMLSVG_CONTEXT, tag, children, attrs)
 
-@inline processtag(x) = string(process(x))
+@inline processtag(🍎) = 🍎
+@inline processtag(x::Expr) = :(processtag($(x)))
+@inline processtag(v::Union{AbstractVector,Tuple}) = string(processtag.(v)...)
 
-process(🍎) = 🍎
-process(b::Bool) = b ? nothing : error("should have been disabled")
-process(v::Union{AbstractVector,Tuple}) = string(process.(v)...)
-process(d::AbstractDict) = Dict{String,Any}((k̃ = process(k); k̃ => process(v, Val(Symbol(k̃)))) for (k, v) ∈ d if isenabled(v))  # runtime bottleneck
+@inline processchild(🍎) = 🍎
+@inline processchild(x::Expr) = :(processchild($(x)))
 
-process(🍎, _) = process(🍎)
-process(d::AbstractDict, ::Val{:style}) = join(("$(k):$(v)" for (k, v) in process(d)), ';')  # runtime bottleneck
+@inline processattr(🍎) = 🍎
+@inline processattr(x::Expr, p::Expr) = (x = :(merge!($(x), $(p)...)); :(processattr($(x))))  # Promises update.
+@inline processattr(b::Bool) = b ? nothing : error("should have been disabled")
+@inline processattr(v::Union{AbstractVector,Tuple}) = string(processattr.(v)...)
+@inline processattr(p::Pair) = (k = processattr(first(p)); k => processattr(last(p), Val(Symbol(k))))
+@inline processattr(d::AbstractDict) = Dict(processattr.(filter(isenabled∘last, collect(d))))
+
+@inline processattr(🍎, ::Val) = processattr(🍎)
+@inline processattr(d::AbstractDict, ::Val{:style}) = join(("$(first(p)):$(last(p))" for p in processattr(d)), ';')
 
 # We hide attrs if `false` or `nothing`, Hyperscript.jl uses `nothing` to
 # mean something else (empty attr).
-isenabled(🍎) = true
-isenabled(b::Bool) = b
-isenabled(::Nothing) = false
+@inline isenabled(🍎) = true
+@inline isenabled(b::Bool) = b
+@inline isenabled(::Nothing) = false
 
 """
     Node(tag, attrs[, promises=(), children=()])
@@ -53,7 +60,7 @@ HTM.Node{String, Dict{String, String}, Tuple{}, Tuple{String}}("div", Dict("clas
 ```
 """
 struct Node{T<:Union{AbstractString,AbstractVector,Tuple},A<:AbstractDict,P<:Union{AbstractVector,Tuple},C<:Union{AbstractVector,Tuple}}
-    tag::T
+    tag::T  # TODO: can tag be empty? See <https://pt-br.reactjs.org/docs/fragments.html#short-syntax> for a usage.
     attrs::A
     promises::P
     children::C
@@ -66,35 +73,12 @@ macro htm_str(s)
     esc(toexpr(htm))
 end
 
-toexpr(🍎) = 🍎
+@inline toexpr(🍎) = 🍎
 @inline function toexpr(🍍::Node)
-    tag = toexpr(🍍.tag)
-    tag isa AbstractString || (tag = :(processtag($(tag))))  # TODO: create a function barrier here
-
-    if !isempty(🍍.attrs)
-        attrs = toexpr(🍍.attrs)
-        if !isempty(🍍.promises)
-            # TODO: this branch has no tests!
-            promises = toexpr(🍍.promises)
-            attrs = :(merge($(attrs), $(promises)...))
-        end
-        attrs = :(process($(attrs)))
-    elseif !isempty(🍍.promises)
-        promises = toexpr(🍍.promises)
-        attrs = :(merge($(promises)...))
-        attrs = :(process($(attrs)))
-    else
-        attrs = ()
-    end
-
-    if !isempty(🍍.children)
-        children = toexpr(🍍.children)
-        # (children = :(process($(children))))
-    else
-        children = ()
-    end
-
-    return :(create_element($(tag), $(attrs), $(children)))
+    tag = !isempty(🍍.tag) ? processtag(toexpr(🍍.tag)) : ""
+    attrs = !(isempty(🍍.attrs) && isempty(🍍.promises)) ? processattr(toexpr(🍍.attrs), toexpr(🍍.promises)) : ()
+    children = !isempty(🍍.children) ? processchild(toexpr(🍍.children)) : ()
+    :(create_element($(tag), $(attrs), $(children)))
 end
 @inline toexpr(s::AbstractString) = startswith(s, '$') ? Meta.parse(s[nextind(s, begin):end]) : s
 @inline toexpr(v::Union{AbstractVector,Tuple}) = :(($(toexpr.(v)...),))
@@ -142,7 +126,7 @@ julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."
 ```
 """
 @inline parseelems(io::IO) = parseelems(io -> true, io)
-@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, [])
+@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, [])  # TODO: can we type this?
 @inline function parseelems!(predicate, io::IO, elems::Union{AbstractVector,Tuple})
     while !eof(io) && predicate(io)
         pushelem!(elems, parseelem(io))
@@ -165,7 +149,7 @@ julia> HTM.parseelem(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>...")
 @inline function parseelem(io::IO)
     startswith(io, '<') && return parsenode(io)
     skipstartswith(io, "\\\$") && return '$'
-    return parseinterp(🍒 -> 🍒 ∈ ('<', '$', '\\'), io)
+    return parseinterp(∈(('<', '$', '\\')), io)
 end
 
 @doc raw"""
@@ -269,9 +253,9 @@ julia> HTM.parsevalue(IOBuffer("\\"fruit\\">🍍..."))
 @inline parsevalue(io::IO) = startswith(io, ('"', '\'')) ? parsequotedvalue(io) : parseunquotedvalue(io)
 @inline function parsequotedvalue(io::IO)
     🥝 = read(io, Char)
-    🧩 = []
+    🧩 = []  # TODO: can we haz types?
     while !(eof(io) || startswith(io, 🥝))
-        push!(🧩, skipstartswith(io, "\\\$") ? '$' : parseinterp(🍒 -> 🍒 ∈ (🥝, '$', '\\'), io))
+        push!(🧩, skipstartswith(io, "\\\$") ? '$' : parseinterp(∈((🥝, '$', '\\')), io))
     end
     skipchars(isequal(🥝), io)
     length(🧩) == 1 && return first(🧩)
