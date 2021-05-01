@@ -3,7 +3,7 @@ module HTM
 using Hyperscript
 
 export create_element
-export processtag, processattr, processchild
+export processtag, processattrs, processchildren
 export @htm_str
 
 const UNIVERSALENDTAG = "<//>"
@@ -30,18 +30,18 @@ julia> create_element("div", Dict("class" => "fruit"), "🍍")
 @inline processtag(x::Expr) = :(processtag($(x)))
 @inline processtag(v::Union{AbstractVector,Tuple}) = string(processtag.(v)...)
 
-@inline processchild(🍎) = 🍎
-@inline processchild(x::Expr) = :(processchild($(x)))
+@inline processchildren(🍎) = 🍎
+@inline processchildren(x::Expr) = :(processchildren($(x)))
 
-@inline processattr(🍎) = 🍎
-@inline processattr(x::Expr, p::Expr) = (x = :(merge!($(x), $(p)...)); :(processattr($(x))))  # Promises update.
-@inline processattr(b::Bool) = b ? nothing : error("should have been disabled")
-@inline processattr(v::Union{AbstractVector,Tuple}) = string(processattr.(v)...)
-@inline processattr(p::Pair) = (k = processattr(first(p)); k => processattr(last(p), Val(Symbol(k))))
-@inline processattr(d::AbstractDict) = Dict(processattr.(filter(isenabled∘last, collect(d))))
+@inline processattrs(🍎) = 🍎
+@inline processattrs(x::Expr, p::Expr) = (x = :(merge!($(x), $(p)...)); :(processattrs($(x))))  # Promises update.
+@inline processattrs(b::Bool) = b ? nothing : error("should have been disabled")
+@inline processattrs(v::Union{AbstractVector,Tuple}) = string(processattrs.(v)...)
+@inline processattrs(p::Pair) = (k = processattrs(first(p)); k => processattrs(last(p), Val(Symbol(k))))
+@inline processattrs(d::AbstractDict) = Dict(processattrs.(filter(isenabled∘last, collect(d))))
 
-@inline processattr(🍎, ::Val) = processattr(🍎)
-@inline processattr(d::AbstractDict, ::Val{:style}) = join(("$(first(p)):$(last(p))" for p in processattr(d)), ';')
+@inline processattrs(🍎, ::Val) = processattrs(🍎)
+@inline processattrs(d::AbstractDict, ::Val{:style}) = join(("$(first(p)):$(last(p))" for p in processattrs(d)), ';')
 
 # We hide attrs if `false` or `nothing`, Hyperscript.jl uses `nothing` to
 # mean something else (empty attr).
@@ -76,11 +76,11 @@ end
 @inline toexpr(🍎) = 🍎
 @inline function toexpr(🍍::Node)
     tag = !isempty(🍍.tag) ? processtag(toexpr(🍍.tag)) : ""
-    attrs = !(isempty(🍍.attrs) && isempty(🍍.promises)) ? processattr(toexpr(🍍.attrs), toexpr(🍍.promises)) : ()
-    children = !isempty(🍍.children) ? processchild(toexpr(🍍.children)) : ()
+    attrs = !(isempty(🍍.attrs) && isempty(🍍.promises)) ? processattrs(toexpr(🍍.attrs), toexpr(🍍.promises)) : ()
+    children = !isempty(🍍.children) ? processchildren(toexpr(🍍.children)) : ()
     :(create_element($(tag), $(attrs), $(children)))
 end
-@inline toexpr(s::AbstractString) = startswith(s, '$') ? Meta.parse(s[nextind(s, begin):end]) : s
+@inline toexpr(s::AbstractString) = (length(s) > 1 && startswith(s, '$')) ? Meta.parse(s[nextind(s, begin):end]) : s
 @inline toexpr(v::Union{AbstractVector,Tuple}) = :(($(toexpr.(v)...),))
 @inline toexpr(p::Pair) = :($(toexpr(first(p))) => $(toexpr(last(p))))
 @inline toexpr(d::AbstractDict) = :(Dict($(toexpr(collect(d)))))
@@ -105,7 +105,7 @@ julia> HTM.parse("pineapple: <div class=\\"fruit\\">🍍</div>...")
     length(elems) == 1 && return first(elems)
     return elems
 end
-@inline parse(s::AbstractString) = parse(IOBuffer(s))
+@inline parse(s::AbstractString) = parse(IOBuffer(s))  # Warning: parse returns Any
 
 # --- HTML specification ---
 
@@ -126,15 +126,15 @@ julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."
 ```
 """
 @inline parseelems(io::IO) = parseelems(io -> true, io)
-@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, [])  # TODO: can we type this?
+@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, Any[])
 @inline function parseelems!(predicate, io::IO, elems::Union{AbstractVector,Tuple})
     while !eof(io) && predicate(io)
         pushelem!(elems, parseelem(io))
     end
     return elems
 end
-pushelem!(elems::AbstractVector, elem) = push!(elems, elem)
-pushelem!(elems::AbstractVector, elem::AbstractString) = isempty(elem) || all(isspace, elem) || push!(elems, elem)  # TODO: we could detect all spaces as we read for performance
+@inline pushelem!(elems::AbstractVector, elem) = push!(elems, elem)  # Warning: pushelem! returns Union{Bool, Vector{Any}}
+@inline pushelem!(elems::AbstractVector, elem::AbstractString) = isempty(elem) || all(isspace, elem) || push!(elems, elem)  # TODO: we could detect all spaces as we read for performance
 
 @doc raw"""
     parseelem(io::IO)
@@ -146,10 +146,10 @@ julia> HTM.parseelem(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>...")
 "pineapple: "
 ```
 """
-@inline function parseelem(io::IO)
+@inline function parseelem(io::IO)  # Warning: parseelem returns Union{String, HTM.Node{T, Dict{Any, Any}, Vector{String}, C} where {T<:Union{AbstractString, Tuple, AbstractVector{T} where T}, C<:Union{Tuple, AbstractVector{T} where T}}}
     startswith(io, '<') && return parsenode(io)
-    skipstartswith(io, "\\\$") && return '$'
-    return parseinterp(∈(('<', '$', '\\')), io)
+    skipstartswith(io, "\\\$") && return "\$"  # frustrated interp
+    return parseinterp(∈("<\$\\"), io)
 end
 
 @doc raw"""
@@ -187,11 +187,11 @@ julia> HTM.parsetag(IOBuffer("div class=\\"fruit\\">🍍..."))
 ```
 """
 @inline function parsetag(io::IO)
-    🧩 = Union{Char,String}[]  # TODO: if we make this String[], we get ~20% parse performance improvement!
-    while !(eof(io) || (🍒 = peek(io, Char)) |> isspace || 🍒 ∈ ('>', '/'))
-        push!(🧩, skipstartswith(io, "\\\$") ? '$' : parseinterp(🍒 -> isspace(🍒) || 🍒 ∈ ('>', '/', '$', '\\'), io))
+    🧩 = String[]
+    while !(eof(io) || (🍒 = peek(io, Char)) |> isspace || 🍒 ∈ ">/")
+        push!(🧩, skipstartswith(io, "\\\$") ? "\$" : parseinterp(isspace ⩔ ∈(">/\$\\"), io))
     end
-    length(🧩) == 1 && return first(🧩)
+    length(🧩) == 1 && return first(🧩)  # Warning: parsetag returns Union{String, Vector{String}}
     return 🧩
 end
 
@@ -209,7 +209,7 @@ julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
 (Dict{Any, Any}("class" => "fruit"), ["\$(attrs)"])
 ```
 """
-@inline parseattrs(io::IO) = parseattrs!(io, Dict(), String[])
+@inline parseattrs(io::IO) = parseattrs!(io, Dict{Any,Any}(), String[])  # Warning: attrs is assigned as Dict{Any, Any}
 @inline function parseattrs!(io::IO, attrs::AbstractDict, promises::Union{AbstractVector,Tuple})
     while !eof(io)
         skipchars(isspace, io)
@@ -219,11 +219,11 @@ julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
     return attrs, promises
 end
 @inline function parseattr!(io::IO, attrs::AbstractDict)
-    key = skipstartswith(io, "\\\$") ? ('$', parsekey(io)) : parsekey(io)
-    eof(io) && (attrs[key] = true; return)
+    key = skipstartswith(io, "\\\$") ? ("\$", parsekey(io)) : parsekey(io)
+    eof(io) && (attrs[key] = true; return)  # Warning: attrs is assigned as Union{Nothing, Dict{Any, Any}}
     let 🍒 = read(io, Char)
         attrs[key] = 🍒 === '=' ? parsevalue(io) : true
-        🍒 ∈ ('>', '/') && skip(io, -1)
+        🍒 ∈ ">/" && skip(io, -1)
     end
     return attrs
 end
@@ -238,7 +238,7 @@ julia> HTM.parsekey(IOBuffer("class=\\"fruit\\">🍍..."))
 "class"
 ```
 """
-@inline parsekey(io::IO) = readuntil(🍒 -> isspace(🍒) || 🍒 ∈ ('=', '>', '/'), io)
+@inline parsekey(io::IO) = readuntil(isspace ⩔ ∈("=>/"), io)
 
 @doc raw"""
     parsevalue(io::IO)
@@ -253,17 +253,17 @@ julia> HTM.parsevalue(IOBuffer("\\"fruit\\">🍍..."))
 @inline parsevalue(io::IO) = startswith(io, ('"', '\'')) ? parsequotedvalue(io) : parseunquotedvalue(io)
 @inline function parsequotedvalue(io::IO)
     🥝 = read(io, Char)
-    🧩 = []  # TODO: can we haz types?
+    🧩 = String[]
     while !(eof(io) || startswith(io, 🥝))
-        push!(🧩, skipstartswith(io, "\\\$") ? '$' : parseinterp(∈((🥝, '$', '\\')), io))
+        push!(🧩, skipstartswith(io, "\\\$") ? "\$" : parseinterp(∈((🥝, '$', '\\')), io))
     end
     skipchars(isequal(🥝), io)
     length(🧩) == 1 && return first(🧩)
     return 🧩
 end
 @inline function parseunquotedvalue(io::IO)
-    let f(🍒) = isspace(🍒) || 🍒 ∈ ('>', '/', '$', '\\')
-        return skipstartswith(io, "\\\$") ? ('$', readuntil(f, io)) : parseinterp(f, io)
+    let f = isspace ⩔ ∈(">/\$\\")
+        return skipstartswith(io, "\\\$") ? ("\$", readuntil(f, io)) : parseinterp(f, io)
     end
 end
 
@@ -285,7 +285,7 @@ julia> HTM.parseinterp(IOBuffer(raw"$((1, (2, 3)))..."))
 @inline function parseinterp(io::IO)
     buf = IOBuffer()
     write(buf, read(io, Char))
-    (eof(io) || isspace(peek(io, Char))) && return '$'  # frustrated interp
+    (eof(io) || isspace(peek(io, Char))) && return "\$"  # frustrated interp
     if startswith(io, '(')
         n = 1
         write(buf, read(io, Char))
@@ -299,7 +299,7 @@ julia> HTM.parseinterp(IOBuffer(raw"$((1, (2, 3)))..."))
             write(buf, 🍒)
         end
     else
-        write(buf, readuntil(🍒 -> isspace(🍒) || 🍒 ∈ ('<', '>', '/', '"', '\'', '=', '$', '\\'), io))
+        write(buf, readuntil(isspace ⩔ ∈("<>/\"\'=\$\\"), io))
     end
     return String(take!(buf))
 end

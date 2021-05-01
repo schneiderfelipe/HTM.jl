@@ -1,6 +1,9 @@
-using HTM
-using Hyperscript
+using Markdown
 using Test
+
+using Hyperscript
+
+using HTM
 
 const r = Hyperscript.render
 
@@ -90,6 +93,11 @@ const r = Hyperscript.render
             @test htm"<div>$((1, 2, 3))</div>" |> r == "<div>123</div>"
             @test htm"<div>$(\"fruit\" => \"pineapple\")</div>" |> r == "<div>&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;</div>"
             @test htm"<div>$(Dict(\"fruit\" => \"pineapple\"))</div>" |> r == "<div>Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;</div>"
+
+            @testset "Exotic objects" begin
+                @test htm"<div>$(HTML(\"<div></div>\"))</div>" |> r == "<div><div></div></div>"
+                @test htm"<div>$(md\"# 🍍\")</div>" |> r == "<div><div class=\"markdown\"><h1>🍍</h1>\n</div></div>"
+            end
         end
 
         @testset "As attributes" begin

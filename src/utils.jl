@@ -1,3 +1,5 @@
+@inline ⩔(f, g) = x -> f(x) | g(x)
+
 # --- Utilities ---
 # That could be contributed to Julia.
 
