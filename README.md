@@ -48,6 +48,7 @@ and [Hypertext Literal](https://observablehq.com/@observablehq/htl):.
 - Multiple root elements (fragments): `htm"<div /><div />"`
 - Boolean attributes: `htm"<div draggable />"` or `htm"<div draggable=$(true) />"`
 - HTML's optional quotes: `htm"<div class=fruit></div>"`
+- Styles: `htm"<div style=$(style)></div>"`
 - Universal end-tags: `htm"<div>🍍<//>"`
 
 Furthermore, the component concept is supported through

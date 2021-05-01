@@ -35,7 +35,10 @@ create_element(type, props, children...) = Node(DEFAULT_HTMLSVG_CONTEXT, type, c
 process(🍎) = 🍎
 process(b::Bool) = b ? nothing : error("should have been disabled")
 process(v::Union{AbstractVector,Tuple}) = string(process.(v)...)
-process(d::AbstractDict) = Dict{String,Any}(process(k) => process(v) for (k, v) ∈ d if isenabled(v))
+process(d::AbstractDict) = Dict{String,Any}((k̃ = process(k); k̃ => process(v, Val(Symbol(k̃)))) for (k, v) ∈ d if isenabled(v))  # runtime bottleneck
+
+process(🍎, _) = process(🍎)
+process(d::AbstractDict, ::Val{:style}) = join(("$(k):$(v)" for (k, v) in process(d)), ';')  # runtime bottleneck
 
 # We hide props if `false` or `nothing`, Hyperscript.jl uses `nothing` to
 # mean something else (empty prop).

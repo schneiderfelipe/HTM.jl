@@ -53,8 +53,8 @@ using Test
         end
 
         @testset "Styles" begin
-            styles = Dict("background" => "orange")
-            @test_broken htm"<span style=$(styles)>pineapple</span>" |> render == "<span style=\"background: orange\">pineapple</span>"
+            style = Dict("background" => "orange")
+            @test htm"<span style=$(style)>pineapple</span>" |> render == "<span style=\"background: orange\">pineapple</span>"
         end
 
         @testset "Callbacks" begin
