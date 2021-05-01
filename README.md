@@ -22,7 +22,7 @@ It is backend-agnostic but uses
 julia> dump(b, maxdepth=1)
 Hyperscript.Node{Hyperscript.HTMLSVG}
   context: Hyperscript.HTMLSVG
-  tag: String "div"
+  node: String "div"
   children: Array{Any}((1,))
   attrs: Dict{String, Any}
 ```
@@ -43,7 +43,7 @@ The syntax was inspired by
 [`htm`](https://github.com/developit/htm),
 and [Hypertext Literal](https://observablehq.com/@observablehq/htl):.
 
-- Spread props: `htm"<div $(props)></div>"`
+- Spread attributes: `htm"<div $(attrs)></div>"`
 - Self-closing tags: `htm"<div />"`
 - Multiple root elements (fragments): `htm"<div /><div />"`
 - Boolean attributes: `htm"<div draggable />"` or `htm"<div draggable=$(true) />"`

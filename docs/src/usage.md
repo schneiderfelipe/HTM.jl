@@ -100,7 +100,7 @@ orange(text) = htm"<span style=\"background: orange\">$(text)</span>"
 htm"<p><strong>This is $(orange(\"really\")) important.</strong></p>"
 ```
 
-HTM.jl allows you to interpolate tag names as well:
+HTM.jl allows you to interpolate tags as well:
 
 ```jldoctest
 julia> htm"<h$(4)>I'm a header<//>"
@@ -195,7 +195,7 @@ attributes:
 ```@example
 using HTM  # hide
 
-props = Dict(
+attrs = Dict(
     "onmouseover" => "this.style.transform = 'rotate(5deg)'",
     "onmousedown" => "this.style.transform = 'rotate(25deg)'",
     "onmouseup" => "this.style.transform = 'rotate(5deg)'",
@@ -203,7 +203,7 @@ props = Dict(
     "onclick" => "alert('You clicked! 🍍🎉')",
 )
 
-htm"<p><button $(props)>Click me</button></p>"
+htm"<p><button $(attrs)>Click me</button></p>"
 ```
 
 ## Why not concatenate?

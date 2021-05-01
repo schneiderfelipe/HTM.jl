@@ -1,13 +1,9 @@
 module HTM
 
-# We say,            Hyperscript.jl says,
-# `tag` or `Tag`      => `Node`
-# `type` or `tagtype` => `tag`
-# `props` (property)  => `attrs` (attribute)
-using Hyperscript: Node, DEFAULT_HTMLSVG_CONTEXT
+using Hyperscript
 
 export create_element
-export processtagname, process
+export processtag, process
 export @htm_str
 
 const UNIVERSALENDTAG = "<//>"
@@ -15,7 +11,7 @@ const UNIVERSALENDTAG = "<//>"
 include("utils.jl")
 
 """
-    create_element(type, props[, children...])
+    create_element(tag, attrs[, children...])
 
 Create a Hyperscript.jl element.
 
@@ -28,9 +24,9 @@ julia> create_element("div", Dict("class" => "fruit"), "🍍")
 <div class="fruit">🍍</div>
 ```
 """
-create_element(type, props, children...) = Node(DEFAULT_HTMLSVG_CONTEXT, type, children, props)
+create_element(tag, attrs, children...) = Hyperscript.Node(Hyperscript.DEFAULT_HTMLSVG_CONTEXT, tag, children, attrs)
 
-@inline processtagname(x) = string(process(x))
+@inline processtag(x) = string(process(x))
 
 process(🍎) = 🍎
 process(b::Bool) = b ? nothing : error("should have been disabled")
@@ -40,30 +36,30 @@ process(d::AbstractDict) = Dict{String,Any}((k̃ = process(k); k̃ => process(v,
 process(🍎, _) = process(🍎)
 process(d::AbstractDict, ::Val{:style}) = join(("$(k):$(v)" for (k, v) in process(d)), ';')  # runtime bottleneck
 
-# We hide props if `false` or `nothing`, Hyperscript.jl uses `nothing` to
-# mean something else (empty prop).
+# We hide attrs if `false` or `nothing`, Hyperscript.jl uses `nothing` to
+# mean something else (empty attr).
 isenabled(🍎) = true
 isenabled(b::Bool) = b
 isenabled(::Nothing) = false
 
 """
-    Tag(type, props[, promises=(), children=()])
+    Node(tag, attrs[, promises=(), children=()])
 
-Compile time internal representation of an HTML tag.
+Compile time internal representation of an HTML node.
 
 ```jldoctest
-julia> HTM.Tag("div", Dict("class" => "fruit"), (), ("🍍",))
-HTM.Tag{String, Dict{String, String}, Tuple{}, Tuple{String}}("div", Dict("class" => "fruit"), (), ("🍍",))
+julia> HTM.Node("div", Dict("class" => "fruit"), (), ("🍍",))
+HTM.Node{String, Dict{String, String}, Tuple{}, Tuple{String}}("div", Dict("class" => "fruit"), (), ("🍍",))
 ```
 """
-struct Tag{T<:Union{AbstractString,AbstractVector,Tuple},A<:AbstractDict,P<:Union{AbstractVector,Tuple},C<:Union{AbstractVector,Tuple}}
-    type::T
-    props::A
+struct Node{T<:Union{AbstractString,AbstractVector,Tuple},A<:AbstractDict,P<:Union{AbstractVector,Tuple},C<:Union{AbstractVector,Tuple}}
+    tag::T
+    attrs::A
     promises::P
     children::C
-    Tag(type, props, promises=(), children=()) = new{typeof(type),typeof(props),typeof(promises),typeof(children)}(type, props, promises, children)
+    Node(tag, attrs, promises=(), children=()) = new{typeof(tag),typeof(attrs),typeof(promises),typeof(children)}(tag, attrs, promises, children)
 end
-Base.:(==)(🍍::Tag, 🍌::Tag) = 🍍.type == 🍌.type && 🍍.props == 🍌.props && all(🍍.promises .== 🍌.promises) && all(🍍.children .== 🍌.children)
+Base.:(==)(🍍::Node, 🍌::Node) = 🍍.tag == 🍌.tag && 🍍.attrs == 🍌.attrs && all(🍍.promises .== 🍌.promises) && all(🍍.children .== 🍌.children)
 
 macro htm_str(s)
     htm = parse(s)
@@ -71,24 +67,24 @@ macro htm_str(s)
 end
 
 toexpr(🍎) = 🍎
-@inline function toexpr(🍍::Tag)
-    type = toexpr(🍍.type)
-    type isa AbstractString || (type = :(processtagname($(type))))  # TODO: create a function barrier here
+@inline function toexpr(🍍::Node)
+    tag = toexpr(🍍.tag)
+    tag isa AbstractString || (tag = :(processtag($(tag))))  # TODO: create a function barrier here
 
-    if !isempty(🍍.props)
-        props = toexpr(🍍.props)
+    if !isempty(🍍.attrs)
+        attrs = toexpr(🍍.attrs)
         if !isempty(🍍.promises)
             # TODO: this branch has no tests!
             promises = toexpr(🍍.promises)
-            props = :(merge($(props), $(promises)...))
+            attrs = :(merge($(attrs), $(promises)...))
         end
-        props = :(process($(props)))
+        attrs = :(process($(attrs)))
     elseif !isempty(🍍.promises)
         promises = toexpr(🍍.promises)
-        props = :(merge($(promises)...))
-        props = :(process($(props)))
+        attrs = :(merge($(promises)...))
+        attrs = :(process($(attrs)))
     else
-        props = ()
+        attrs = ()
     end
 
     if !isempty(🍍.children)
@@ -98,7 +94,7 @@ toexpr(🍎) = 🍎
         children = ()
     end
 
-    return :(create_element($(type), $(props), $(children)))
+    return :(create_element($(tag), $(attrs), $(children)))
 end
 @inline toexpr(s::AbstractString) = startswith(s, '$') ? Meta.parse(s[nextind(s, begin):end]) : s
 @inline toexpr(v::Union{AbstractVector,Tuple}) = :(($(toexpr.(v)...),))
@@ -115,7 +111,7 @@ Parse HTML.
 julia> HTM.parse("pineapple: <div class=\\"fruit\\">🍍</div>...")
 3-element Vector{Any}:
  "pineapple: "
- HTM.Tag{String, Dict{Any, Any}, Vector{String}, Vector{Any}}("div", Dict{Any, Any}("class" => "fruit"), String[], Any["🍍"])
+ HTM.Node{String, Dict{Any, Any}, Vector{String}, Vector{Any}}("div", Dict{Any, Any}("class" => "fruit"), String[], Any["🍍"])
  "..."
 ```
 """
@@ -141,7 +137,7 @@ This function is the entry point for an implementation of a subset of the
 julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."))
 3-element Vector{Any}:
  "pineapple: "
- HTM.Tag{String, Dict{Any, Any}, Vector{String}, Vector{Any}}("div", Dict{Any, Any}("class" => "fruit"), String[], Any["🍍"])
+ HTM.Node{String, Dict{Any, Any}, Vector{String}, Vector{Any}}("div", Dict{Any, Any}("class" => "fruit"), String[], Any["🍍"])
  "..."
 ```
 """
@@ -167,46 +163,46 @@ julia> HTM.parseelem(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>...")
 ```
 """
 @inline function parseelem(io::IO)
-    startswith(io, '<') && return parsetag(io)
+    startswith(io, '<') && return parsenode(io)
     skipstartswith(io, "\\\$") && return '$'
     return parseinterp(🍒 -> 🍒 ∈ ('<', '$', '\\'), io)
 end
 
 @doc raw"""
-    parsetag(io::IO)
+    parsenode(io::IO)
 
-Parse a `Tag` object.
+Parse a `Node` object.
 
 ```jldoctest
-julia> HTM.parsetag(IOBuffer("<div class=\\"fruit\\">🍍</div>..."))
-HTM.Tag{String, Dict{Any, Any}, Vector{String}, Vector{Any}}("div", Dict{Any, Any}("class" => "fruit"), String[], Any["🍍"])
+julia> HTM.parsenode(IOBuffer("<div class=\\"fruit\\">🍍</div>..."))
+HTM.Node{String, Dict{Any, Any}, Vector{String}, Vector{Any}}("div", Dict{Any, Any}("class" => "fruit"), String[], Any["🍍"])
 ```
 """
-@inline function parsetag(io::IO)
+@inline function parsenode(io::IO)
     skipchars(isequal('<'), io)
-    type = parsetagtype(io)
-    props, promises = parseprops(io)
+    tag = parsetag(io)
+    attrs, promises = parseattrs(io)
     if read(io, Char) === '/'
         skipchars(isequal('>'), io)
-        return Tag(type, props, promises)
+        return Node(tag, attrs, promises)
     end
-    endtag = "</$(processtagname(type))>"
+    endtag = "</$(processtag(tag))>"
     children = parseelems(io -> !(startswith(io, endtag) || startswith(io, UNIVERSALENDTAG)), io)
     skipstartswith(io, endtag) || skipstartswith(io, UNIVERSALENDTAG) || error("tag not properly closed")
-    return Tag(type, props, promises, children)
+    return Node(tag, attrs, promises, children)
 end
 
 @doc raw"""
-    parsetagtype(io::IO)
+    parsetag(io::IO)
 
-Parse an HTML tag type.
+Parse an HTML tag.
 
 ```jldoctest
-julia> HTM.parsetagtype(IOBuffer("div class=\\"fruit\\">🍍..."))
+julia> HTM.parsetag(IOBuffer("div class=\\"fruit\\">🍍..."))
 "div"
 ```
 """
-@inline function parsetagtype(io::IO)
+@inline function parsetag(io::IO)
     🧩 = Union{Char,String}[]  # TODO: if we make this String[], we get ~20% parse performance improvement!
     while !(eof(io) || (🍒 = peek(io, Char)) |> isspace || 🍒 ∈ ('>', '/'))
         push!(🧩, skipstartswith(io, "\\\$") ? '$' : parseinterp(🍒 -> isspace(🍒) || 🍒 ∈ ('>', '/', '$', '\\'), io))
@@ -216,42 +212,42 @@ julia> HTM.parsetagtype(IOBuffer("div class=\\"fruit\\">🍍..."))
 end
 
 @doc raw"""
-    parseprops(io::IO)
+    parseattrs(io::IO)
 
-Parse HTML properties of a tag.
-The returned tuple contains both true properties and promisses.
+Parse HTML attributes of a node.
+The returned tuple contains both true attributes and promisses.
 
 ```jldoctest
-julia> HTM.parseprops(IOBuffer("class=\\"fruit\\">🍍..."))
+julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\">🍍..."))
 (Dict{Any, Any}("class" => "fruit"), String[])
 
-julia> HTM.parseprops(IOBuffer("class=\\"fruit\\" \$(props)>🍍..."))
-(Dict{Any, Any}("class" => "fruit"), ["\$(props)"])
+julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
+(Dict{Any, Any}("class" => "fruit"), ["\$(attrs)"])
 ```
 """
-@inline parseprops(io::IO) = parseprops!(io, Dict(), String[])
-@inline function parseprops!(io::IO, props::AbstractDict, promises::Union{AbstractVector,Tuple})
+@inline parseattrs(io::IO) = parseattrs!(io, Dict(), String[])
+@inline function parseattrs!(io::IO, attrs::AbstractDict, promises::Union{AbstractVector,Tuple})
     while !eof(io)
         skipchars(isspace, io)
         startswith(io, ('>', '/')) && break
-        startswith(io, '$') ? push!(promises, parseinterp(io)) : (props = parseprop!(io, props))
+        startswith(io, '$') ? push!(promises, parseinterp(io)) : (attrs = parseattr!(io, attrs))
     end
-    return props, promises
+    return attrs, promises
 end
-@inline function parseprop!(io::IO, props::AbstractDict)
+@inline function parseattr!(io::IO, attrs::AbstractDict)
     key = skipstartswith(io, "\\\$") ? ('$', parsekey(io)) : parsekey(io)
-    eof(io) && (props[key] = true; return)
+    eof(io) && (attrs[key] = true; return)
     let 🍒 = read(io, Char)
-        props[key] = 🍒 === '=' ? parsevalue(io) : true
+        attrs[key] = 🍒 === '=' ? parsevalue(io) : true
         🍒 ∈ ('>', '/') && skip(io, -1)
     end
-    return props
+    return attrs
 end
 
 @doc raw"""
     parsekey(io::IO)
 
-Parse an HTML property key.
+Parse an HTML attribute key.
 
 ```jldoctest
 julia> HTM.parsekey(IOBuffer("class=\\"fruit\\">🍍..."))
@@ -263,7 +259,7 @@ julia> HTM.parsekey(IOBuffer("class=\\"fruit\\">🍍..."))
 @doc raw"""
     parsevalue(io::IO)
 
-Parse an HTML property value.
+Parse an HTML attribute value.
 
 ```jldoctest
 julia> HTM.parsevalue(IOBuffer("\\"fruit\\">🍍..."))

@@ -1,5 +1,4 @@
 using HTM
-using HTM: parsetag, Tag
 using Hyperscript
 using Hyperscript: render
 using Test
@@ -9,9 +8,9 @@ using Test
     # Do we have examples in the documentation?
 
     @testset "Features" begin
-        @testset "Spread props" begin
-            props = Dict("class" => "fruit")
-            @test htm"<div $(props)></div>" |> render == "<div class=\"fruit\"></div>"
+        @testset "Spread attributes" begin
+            attrs = Dict("class" => "fruit")
+            @test htm"<div $(attrs)></div>" |> r == "<div class=\"fruit\"></div>"
         end
 
         @testset "Self-closing tags" begin
@@ -92,7 +91,7 @@ using Test
             @test htm"<div>$(Dict(\"fruit\" => \"pineapple\"))</div>" |> render == "<div>Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;</div>"
         end
 
-        @testset "As props" begin
+        @testset "As attributes" begin
             @testset "As keys" begin
                 @test_throws MethodError htm"<div $(nothing)=fruit></div>" |> render == "<div nothing=\"fruit\"></div>"
                 @test_throws MethodError htm"<div $(missing)=fruit></div>" |> render == "<div missing=\"fruit\"></div>"
@@ -225,70 +224,70 @@ using Test
         @test create_element("circle", Dict("fill" => "orange")) |> render == "<circle fill=\"orange\" />"
     end
 
-    @testset "Tag (IR)" begin
-        @test parsetag(IOBuffer("<div />")) == Tag("div", Dict())
-        @test parsetag(IOBuffer("<div>Hi!</div>")) == Tag("div", Dict(), (), ["Hi!"])
-        @test parsetag(IOBuffer("<div class=fruit />")) == Tag("div", Dict("class" => "fruit"))
-        @test parsetag(IOBuffer("<div class=fruit>Hi!</div>")) == Tag("div", Dict("class" => "fruit"), (), ["Hi!"])
-        @test parsetag(IOBuffer("<div class=fruit>Hi there!</div>")) == Tag("div", Dict("class" => "fruit"), (), ["Hi there!"])
+    @testset "Internal representation" begin
+        @test HTM.parsenode(IOBuffer("<div />")) == HTM.Node("div", Dict())
+        @test HTM.parsenode(IOBuffer("<div>Hi!</div>")) == HTM.Node("div", Dict(), (), ["Hi!"])
+        @test HTM.parsenode(IOBuffer("<div class=fruit />")) == HTM.Node("div", Dict("class" => "fruit"))
+        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi!</div>")) == HTM.Node("div", Dict("class" => "fruit"), (), ["Hi!"])
+        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi there!</div>")) == HTM.Node("div", Dict("class" => "fruit"), (), ["Hi there!"])
 
-        @test parsetag(IOBuffer("<button class=fruit disabled />")) == Tag("button", Dict("class" => "fruit", "disabled" => true))
-        @test parsetag(IOBuffer("<button class=fruit disabled>Click me</button>")) == Tag("button", Dict("class" => "fruit", "disabled" => true), (), ["Click me"])
+        @test HTM.parsenode(IOBuffer("<button class=fruit disabled />")) == HTM.Node("button", Dict("class" => "fruit", "disabled" => true))
+        @test HTM.parsenode(IOBuffer("<button class=fruit disabled>Click me</button>")) == HTM.Node("button", Dict("class" => "fruit", "disabled" => true), (), ["Click me"])
 
-        @test parsetag(IOBuffer("<circle fill=orange />")) == Tag("circle", Dict("fill" => "orange"))
+        @test HTM.parsenode(IOBuffer("<circle fill=orange />")) == HTM.Node("circle", Dict("fill" => "orange"))
 
         @testset "Stress tests" begin
             quotes = ("", '"', '\'')
             separators = ("", ' ', '\n', '\t', "  ")
 
             @testset "Basic syntax" begin
-                voiddiv = parsetag(IOBuffer("<div />"))
-                litclass = parsetag(IOBuffer("<div class=fruit />"))
-                offlitclass = parsetag(IOBuffer("<div class=fruit draggable />"))
+                voiddiv = HTM.parsenode(IOBuffer("<div />"))
+                litclass = HTM.parsenode(IOBuffer("<div class=fruit />"))
+                offlitclass = HTM.parsenode(IOBuffer("<div class=fruit draggable />"))
 
                 let c = "Hi there!"
-                    nonvoiddiv = parsetag(IOBuffer("<div>$(c)</div>"))
-                    fruitnonvoiddiv = parsetag(IOBuffer("<div class=fruit>$(c)</div>"))
-                    draggablefruitnonvoiddiv = parsetag(IOBuffer("<div class=fruit draggable>$(c)</div>"))
+                    nonvoiddiv = HTM.parsenode(IOBuffer("<div>$(c)</div>"))
+                    fruitnonvoiddiv = HTM.parsenode(IOBuffer("<div class=fruit>$(c)</div>"))
+                    draggablefruitnonvoiddiv = HTM.parsenode(IOBuffer("<div class=fruit draggable>$(c)</div>"))
 
                     @testset "Separator `$(s)`" for s in separators
-                        @test parsetag(IOBuffer("<div$(s)/>")) == voiddiv
+                        @test HTM.parsenode(IOBuffer("<div$(s)/>")) == voiddiv
 
-                        @test parsetag(IOBuffer("<div$(s)></div>")) == voiddiv
+                        @test HTM.parsenode(IOBuffer("<div$(s)></div>")) == voiddiv
 
-                        @test parsetag(IOBuffer("<div$(s)>$(c)</div>")) == nonvoiddiv
+                        @test HTM.parsenode(IOBuffer("<div$(s)>$(c)</div>")) == nonvoiddiv
 
                         @testset "Quote `$(q)`" for q in quotes
-                            @test parsetag(IOBuffer("<div class=$(q)fruit$(q)$(s)/>")) == litclass
-                            @test parsetag(IOBuffer("<div class=$(q)fruit$(q) draggable$(s)/>")) == offlitclass
+                            @test HTM.parsenode(IOBuffer("<div class=$(q)fruit$(q)$(s)/>")) == litclass
+                            @test HTM.parsenode(IOBuffer("<div class=$(q)fruit$(q) draggable$(s)/>")) == offlitclass
 
-                            @test parsetag(IOBuffer("<div class=$(q)fruit$(q)$(s)></div>")) == litclass
-                            @test parsetag(IOBuffer("<div class=$(q)fruit$(q) draggable$(s)></div>")) == offlitclass
+                            @test HTM.parsenode(IOBuffer("<div class=$(q)fruit$(q)$(s)></div>")) == litclass
+                            @test HTM.parsenode(IOBuffer("<div class=$(q)fruit$(q) draggable$(s)></div>")) == offlitclass
 
-                            @test parsetag(IOBuffer("<div class=$(q)fruit$(q)$(s)>$(c)</div>")) == fruitnonvoiddiv
-                            @test parsetag(IOBuffer("<div class=$(q)fruit$(q) draggable$(s)>$(c)</div>")) == draggablefruitnonvoiddiv
+                            @test HTM.parsenode(IOBuffer("<div class=$(q)fruit$(q)$(s)>$(c)</div>")) == fruitnonvoiddiv
+                            @test HTM.parsenode(IOBuffer("<div class=$(q)fruit$(q) draggable$(s)>$(c)</div>")) == draggablefruitnonvoiddiv
                         end
                     end
                 end
             end
 
             @testset "Dollar signs" begin
-                @test parsetag(IOBuffer("<div>\$notvar</div>")) == parsetag(IOBuffer(raw"<div>$notvar</div>"))
-                @test parsetag(IOBuffer("<div>\$(notvar)</div>")) == parsetag(IOBuffer(raw"<div>$(notvar)</div>"))
+                @test HTM.parsenode(IOBuffer("<div>\$notvar</div>")) == HTM.parsenode(IOBuffer(raw"<div>$notvar</div>"))
+                @test HTM.parsenode(IOBuffer("<div>\$(notvar)</div>")) == HTM.parsenode(IOBuffer(raw"<div>$(notvar)</div>"))
 
                 @testset "Separator `$(s)`" for s in separators
-                    @test parsetag(IOBuffer("<\$notvar$(s)/>")) == parsetag(IOBuffer(raw"<$notvar></$notvar>"))
-                    @test parsetag(IOBuffer("<div \$notvar$(s)/>")) == parsetag(IOBuffer(raw"""<div $notvar></div>"""))
+                    @test HTM.parsenode(IOBuffer("<\$notvar$(s)/>")) == HTM.parsenode(IOBuffer(raw"<$notvar></$notvar>"))
+                    @test HTM.parsenode(IOBuffer("<div \$notvar$(s)/>")) == HTM.parsenode(IOBuffer(raw"""<div $notvar></div>"""))
 
-                    @test parsetag(IOBuffer("<\$(notvar)$(s)/>")) == parsetag(IOBuffer(raw"<$(notvar)></$(notvar)>"))
-                    @test parsetag(IOBuffer("<div \$(notvar)$(s)/>")) == parsetag(IOBuffer(raw"""<div $(notvar)></div>"""))
+                    @test HTM.parsenode(IOBuffer("<\$(notvar)$(s)/>")) == HTM.parsenode(IOBuffer(raw"<$(notvar)></$(notvar)>"))
+                    @test HTM.parsenode(IOBuffer("<div \$(notvar)$(s)/>")) == HTM.parsenode(IOBuffer(raw"""<div $(notvar)></div>"""))
 
                     @testset "Quote `$(q)`" for q in quotes
-                        @test parsetag(IOBuffer("<div \$notvar=$(q)fruit$(q)$(s)/>")) == parsetag(IOBuffer(raw"""<div $notvar="fruit"></div>"""))
-                        @test parsetag(IOBuffer("<div class=$(q)\$notvar$(q)$(s)/>")) == parsetag(IOBuffer(raw"""<div class="$notvar"></div>"""))
+                        @test HTM.parsenode(IOBuffer("<div \$notvar=$(q)fruit$(q)$(s)/>")) == HTM.parsenode(IOBuffer(raw"""<div $notvar="fruit"></div>"""))
+                        @test HTM.parsenode(IOBuffer("<div class=$(q)\$notvar$(q)$(s)/>")) == HTM.parsenode(IOBuffer(raw"""<div class="$notvar"></div>"""))
 
-                        @test parsetag(IOBuffer("<div \$(notvar)=$(q)fruit$(q)$(s)/>")) == parsetag(IOBuffer(raw"""<div $(notvar)="fruit"></div>"""))
-                        @test parsetag(IOBuffer("<div class=$(q)\$(notvar)$(q)$(s)/>")) == parsetag(IOBuffer(raw"""<div class="$(notvar)"></div>"""))
+                        @test HTM.parsenode(IOBuffer("<div \$(notvar)=$(q)fruit$(q)$(s)/>")) == HTM.parsenode(IOBuffer(raw"""<div $(notvar)="fruit"></div>"""))
+                        @test HTM.parsenode(IOBuffer("<div class=$(q)\$(notvar)$(q)$(s)/>")) == HTM.parsenode(IOBuffer(raw"""<div class="$(notvar)"></div>"""))
                     end
                 end
             end
