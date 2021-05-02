@@ -31,6 +31,11 @@ const r = Hyperscript.render
 
         @testset "HTML's optional quotes" begin
             @test htm"<div class=fruit></div>" |> r == "<div class=\"fruit\"></div>"
+
+            @testset "URLs" begin
+                @test htm"<script src=https://www.example.org/code/library.js />" |> r == "<script src=\"https://www.example.org/code/library.js\"></script>"
+                @test htm"<script src=https://www.example.org/code/library.js></script>" |> r == "<script src=\"https://www.example.org/code/library.js\"></script>"
+            end
         end
 
         @testset "Components" begin

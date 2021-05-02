@@ -262,6 +262,7 @@ julia> HTM.parsevalue(IOBuffer("\\"fruit\\">🍍..."))
     return 🧩
 end
 @inline function parseunquotedvalue(io::IO)
+    startswith(io, "http") && return parseinterp(isspace ⩔ isequal('>'), io)
     let f = isspace ⩔ ∈(">/\$\\")
         return skipstartswith(io, "\\\$") ? ("\$", readuntil(f, io)) : parseinterp(f, io)  # TODO: use parseinterp diretly here and in other places
     end
