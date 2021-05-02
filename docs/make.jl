@@ -19,6 +19,7 @@ makedocs(;
         "Design" => "design.md",
         "Related packages" => "related.md",
         "Docstrings" => "autodocs.md",
+        "Benchmarks" => "benchmarks.md",
     ],
 )
 
