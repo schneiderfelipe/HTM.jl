@@ -14,7 +14,7 @@ macro (`@htm_str`) for generating HTML with a syntax inspired by
 [`htm`](https://github.com/developit/htm),
 [JSX](https://reactjs.org/docs/introducing-jsx.html),
 [and](https://lit-html.polymer-project.org/guide)
-[others](https://observablehq.com/@observablehq/htl).
+[others](https://github.com/observablehq/htl).
 HTM.jl interpolates
 [embedded Julia expressions](https://docs.julialang.org/en/v1/manual/strings/#string-interpolation)
 based on context:
@@ -32,7 +32,7 @@ What follows is a step-by-step guide of its main features.
 
 ## Basic features
 
-HTM.jl parses markup as nodes, `String` (or objects in general), or `nothing`:
+HTM.jl parses markup as nodes, `String` (or any object in general), or `nothing`:
 
 ```jldoctest
 julia> htm"<div>🍍</div>"
@@ -100,6 +100,10 @@ orange(text) = htm"<span style=\"background: orange\">$(text)</span>"
 htm"<p><strong>This is $(orange(\"really\")) important.</strong></p>"
 ```
 
+Contrary to
+[JSX](https://reactjs.org/docs/jsx-in-depth.html#choosing-the-type-at-runtime)
+or
+[Hypertext Literal](https://github.com/observablehq/htl#errors-on-invalid-bindings),
 HTM.jl allows you to interpolate tags as well:
 
 ```jldoctest

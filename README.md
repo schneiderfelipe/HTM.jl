@@ -44,7 +44,7 @@ The syntax was inspired by
 [JSX](https://reactjs.org/docs/introducing-jsx.html),
 [lit-html](https://lit-html.polymer-project.org/guide),
 [`htm`](https://github.com/developit/htm),
-and [Hypertext Literal](https://observablehq.com/@observablehq/htl):
+and [Hypertext Literal](https://github.com/observablehq/htl):
 
 - Spread attributes: `htm"<div $(attrs)></div>"`
 - Self-closing tags: `htm"<div />"`
@@ -79,10 +79,10 @@ It was once called JSX.jl.
 Its main goal is to create a fully-featured, backend-agnostic (any library
 that produces HTML elements can be used as a backend) alternative to the
 `@html_str` macro.
-We also want `@md_str`-like string interpolations, JSX-like syntax, and full
+I also wanted `@md_str`-like string interpolations, JSX-like syntax, and full
 compatibility with Julia objects through Julia's display system.
 
 HTM.jl is a **work in progress** but is already quite usable and fast.
 It may not be ready for production use yet though.
-Please help us improve it by
+Please help me improve it by
 [sharing your feedback](https://github.com/schneiderfelipe/HTM.jl/issues). 🙏

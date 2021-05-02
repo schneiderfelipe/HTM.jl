@@ -43,7 +43,7 @@ julia> create_element("div", Dict("class" => "fruit"), "🍍")
 @inline processattrs(🍎, ::Val) = processattrs(🍎)
 @inline processattrs(d::AbstractDict, ::Val{:style}) = join(("$(first(p)):$(last(p))" for p in processattrs(d)), ';')
 
-# We hide attrs if `false` or `nothing`, Hyperscript.jl uses `nothing` to
+# Hide attrs if `false` or `nothing`, Hyperscript.jl uses `nothing` to
 # mean something else (empty attr).
 @inline isenabled(🍎) = true
 @inline isenabled(b::Bool) = b
@@ -134,7 +134,7 @@ julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."
     return elems
 end
 @inline pushelem!(elems::AbstractVector, elem) = push!(elems, elem)  # Warning: pushelem! returns Union{Bool, Vector{Any}}
-@inline pushelem!(elems::AbstractVector, elem::AbstractString) = isempty(elem) || all(isspace, elem) || push!(elems, elem)  # TODO: we could detect all spaces as we read for performance
+@inline pushelem!(elems::AbstractVector, elem::AbstractString) = isempty(elem) || all(isspace, elem) || push!(elems, elem)  # TODO: detect all spaces during reading for performance
 
 @doc raw"""
     parseelem(io::IO)
@@ -263,7 +263,7 @@ julia> HTM.parsevalue(IOBuffer("\\"fruit\\">🍍..."))
 end
 @inline function parseunquotedvalue(io::IO)
     let f = isspace ⩔ ∈(">/\$\\")
-        return skipstartswith(io, "\\\$") ? ("\$", readuntil(f, io)) : parseinterp(f, io)
+        return skipstartswith(io, "\\\$") ? ("\$", readuntil(f, io)) : parseinterp(f, io)  # TODO: use parseinterp diretly here and in other places
     end
 end
 

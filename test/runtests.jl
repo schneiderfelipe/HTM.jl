@@ -8,9 +8,6 @@ using HTM
 const r = Hyperscript.render
 
 @testset "HTM.jl" begin
-    # Do we have 100% coverage?
-    # Do we have examples in the documentation?
-
     @testset "Features" begin
         @testset "Spread attributes" begin
             attrs = Dict("class" => "fruit")

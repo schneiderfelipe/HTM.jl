@@ -3,7 +3,7 @@ using Hyperscript
 
 using HTM
 
-# Define a parent BenchmarkGroup to contain our suite
+# Define a parent BenchmarkGroup to contain the suite
 const suite = BenchmarkGroup()
 
 # --- Features ---
