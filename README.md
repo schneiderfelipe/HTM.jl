@@ -14,9 +14,11 @@ julia> b = box("Hello HTM.jl🍍!")
 <div id="23">Hello HTM.jl🍍&#33;</div>
 ```
 
-HTM.jl is **JSX-like syntax** for Julia.
+HTM.jl is [**JSX-like syntax**](https://reactjs.org/docs/introducing-jsx.html)
+for [Julia](https://julialang.org/).
 It is backend-agnostic but uses
-[Hyperscript.jl](https://github.com/yurivish/Hyperscript.jl) by default:
+[Hyperscript.jl](https://github.com/yurivish/Hyperscript.jl) for generating
+HTML elements by default:
 
 ```julia
 julia> dump(b, maxdepth=1)
@@ -28,6 +30,7 @@ Hyperscript.Node{Hyperscript.HTMLSVG}
 ```
 
 (One of the advantages of using Hyperscript.jl is that objects are lazily rendered.)
+
 And since `@htm_str` is a macro, **parsing happens at compile time**:
 
 ```julia
@@ -41,7 +44,7 @@ The syntax was inspired by
 [JSX](https://reactjs.org/docs/introducing-jsx.html),
 [lit-html](https://lit-html.polymer-project.org/guide),
 [`htm`](https://github.com/developit/htm),
-and [Hypertext Literal](https://observablehq.com/@observablehq/htl):.
+and [Hypertext Literal](https://observablehq.com/@observablehq/htl):
 
 - Spread attributes: `htm"<div $(attrs)></div>"`
 - Self-closing tags: `htm"<div />"`
@@ -51,7 +54,7 @@ and [Hypertext Literal](https://observablehq.com/@observablehq/htl):.
 - Styles: `htm"<div style=$(style)></div>"`
 - Universal end-tags: `htm"<div>🍍<//>"`
 
-Furthermore, the component concept is supported through
+Furthermore, the components can be constructed using
 [Julia's display system](https://docs.julialang.org/en/v1/base/io-network/#Multimedia-I/O):
 `htm"$(Fruit(\"pineapple\", '🍍'))"`.
 
@@ -66,19 +69,20 @@ pkg> add https://github.com/schneiderfelipe/HTM.jl
 
 ## Usage
 
-See the documentation for more (I hope you like pineapples).
+[See the documentation](https://schneiderfelipe.xyz/HTM.jl/dev/) (I hope you
+like pineapples).
 
 ## Project status
 
-HTM.jl is a small (<300 lines of code) open-source Julia project.
+HTM.jl is a small (~300 lines of code) open-source Julia project.
 It was once called JSX.jl.
-Its main goal is to create a fully-featured, backend-agnostic alternative to the
+Its main goal is to create a fully-featured, backend-agnostic (any library
+that produces HTML elements can be used as a backend) alternative to the
 `@html_str` macro.
 We also want `@md_str`-like string interpolations, JSX-like syntax, and full
 compatibility with Julia objects through Julia's display system.
 
-Any library that produces HTML elements can be used as a backend.
-
-HTM.jl is a **work in progress** but is already usable and fast.
-It may not be ready for production use yet.
-Please help us improve by [sharing your feedback](https://github.com/schneiderfelipe/HTM.jl/issues). 🙏
+HTM.jl is a **work in progress** but is already quite usable and fast.
+It may not be ready for production use yet though.
+Please help us improve it by
+[sharing your feedback](https://github.com/schneiderfelipe/HTM.jl/issues). 🙏
