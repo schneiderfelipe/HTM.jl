@@ -59,14 +59,14 @@ julia> HTM.Node("div", Dict("class" => "fruit"), (), ("🍍",))
 HTM.Node{String, Dict{String, String}, Tuple{}, Tuple{String}}("div", Dict("class" => "fruit"), (), ("🍍",))
 ```
 """
-struct Node{T<:Union{AbstractString,AbstractVector,Tuple},A<:AbstractDict,P<:Union{AbstractVector,Tuple},C<:Union{AbstractVector,Tuple}}
-    tag::T  # TODO: can tag be empty? See <https://pt-br.reactjs.org/docs/fragments.html#short-syntax> for a usage.
-    attrs::A
-    promises::P
-    children::C
-    Node(tag, attrs, promises=(), children=()) = new{typeof(tag),typeof(attrs),typeof(promises),typeof(children)}(tag, attrs, promises, children)
+struct Node
+    tag::Vector{String}  # TODO: can tag be empty? See <https://pt-br.reactjs.org/docs/fragments.html#short-syntax> for a usage.
+    attrs::Dict{String,Union{Bool,String,Vector{String}}}  # TODO: transform this Union in Vector{String}
+    promises::Vector{String}
+    children::Vector{Union{String, HTM.Node}}
+    Node(tag, attrs, promises=String[], children=Union{String, HTM.Node}[]) = new(tag, attrs, promises, children)
 end
-Base.:(==)(🍍::Node, 🍌::Node) = 🍍.tag == 🍌.tag && 🍍.attrs == 🍌.attrs && all(🍍.promises .== 🍌.promises) && all(🍍.children .== 🍌.children)
+Base.:(==)(🍍::Node, 🍌::Node) = 🍍.tag == 🍌.tag && 🍍.attrs == 🍌.attrs && 🍍.promises == 🍌.promises && 🍍.children == 🍌.children
 
 macro htm_str(s)
     htm = parse(s)
@@ -75,14 +75,14 @@ end
 
 @inline toexpr(🍎) = 🍎
 @inline function toexpr(🍍::Node)
-    tag = !isempty(🍍.tag) ? processtag(toexpr(🍍.tag)) : ""
-    attrs = !(isempty(🍍.attrs) && isempty(🍍.promises)) ? processattrs(toexpr(🍍.attrs), toexpr(🍍.promises)) : ()
-    children = !isempty(🍍.children) ? processchildren(toexpr(🍍.children)) : ()
+    tag = isempty(🍍.tag) ? "" : processtag(toexpr(🍍.tag))
+    attrs = (isempty(🍍.attrs) && isempty(🍍.promises)) ? () : processattrs(toexpr(🍍.attrs), toexpr(🍍.promises))
+    children = isempty(🍍.children) ? () : processchildren(toexpr(🍍.children))
     :(create_element($(tag), $(attrs), $(children)))
 end
 @inline toexpr(s::AbstractString) = (length(s) > 1 && startswith(s, '$')) ? Meta.parse(s[nextind(s, begin):end]) : s
-@inline toexpr(v::Union{AbstractVector,Tuple}) = :(($(toexpr.(v)...),))
-@inline toexpr(p::Pair) = :($(toexpr(first(p))) => $(toexpr(last(p))))
+@inline toexpr(v::AbstractVector) = :(($(toexpr.(v)...),))
+@inline toexpr(p::Pair) = :($(first(p)) => $(toexpr(last(p))))  # no interps in keys
 @inline toexpr(d::AbstractDict) = :(Dict($(toexpr(collect(d)))))
 
 @doc raw"""
@@ -99,13 +99,13 @@ julia> HTM.parse("pineapple: <div class=\\"fruit\\">🍍</div>...")
  "..."
 ```
 """
-@inline function parse(io::IO)
+@inline function parse(io::IO)::Any
     elems = parseelems(io)
     isempty(elems) && return nothing
-    length(elems) == 1 && return first(elems)
+    length(elems) === 1 && return first(elems)
     return elems
 end
-@inline parse(s::AbstractString) = parse(IOBuffer(s))  # Warning: parse returns Any
+@inline parse(s::AbstractString) = parse(IOBuffer(s))
 
 # --- HTML specification ---
 
@@ -126,15 +126,15 @@ julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."
 ```
 """
 @inline parseelems(io::IO) = parseelems(io -> true, io)
-@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, Any[])
-@inline function parseelems!(predicate, io::IO, elems::Union{AbstractVector,Tuple})
+@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, Union{String, HTM.Node}[])
+@inline function parseelems!(predicate, io::IO, elems::AbstractVector)
     while !eof(io) && predicate(io)
         pushelem!(elems, parseelem(io))
     end
     return elems
 end
-@inline pushelem!(elems::AbstractVector, elem) = push!(elems, elem)  # Warning: pushelem! returns Union{Bool, Vector{Any}}
-@inline pushelem!(elems::AbstractVector, elem::AbstractString) = isempty(elem) || all(isspace, elem) || push!(elems, elem)  # TODO: detect all spaces during reading for performance
+@inline pushelem!(elems::AbstractVector, elem) = push!(elems, elem)
+@inline pushelem!(elems::AbstractVector, elem::AbstractString) = (isempty(elem) || all(isspace, elem)) ? elems : push!(elems, elem)  # TODO: detect all spaces during reading for performance
 
 @doc raw"""
     parseelem(io::IO)
@@ -146,7 +146,7 @@ julia> HTM.parseelem(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>...")
 "pineapple: "
 ```
 """
-@inline function parseelem(io::IO)  # Warning: parseelem returns Union{String, HTM.Node{T, Dict{Any, Any}, Vector{String}, C} where {T<:Union{AbstractString, Tuple, AbstractVector{T} where T}, C<:Union{Tuple, AbstractVector{T} where T}}}
+@inline function parseelem(io::IO)::Union{String, HTM.Node}
     startswith(io, '<') && return parsenode(io)
     skipstartswith(io, "\\\$") && return "\$"  # frustrated interp
     return parseinterp(∈("<\$\\"), io)
@@ -183,7 +183,7 @@ Parse an HTML tag.
 
 ```jldoctest
 julia> HTM.parsetag(IOBuffer("div class=\\"fruit\\">🍍..."))
-"div"
+["div"]
 ```
 """
 @inline function parsetag(io::IO)
@@ -191,7 +191,6 @@ julia> HTM.parsetag(IOBuffer("div class=\\"fruit\\">🍍..."))
     while !(eof(io) || (🍒 = peek(io, Char)) |> isspace || 🍒 ∈ ">/")
         push!(🧩, skipstartswith(io, "\\\$") ? "\$" : parseinterp(isspace ⩔ ∈(">/\$\\"), io))
     end
-    length(🧩) == 1 && return first(🧩)  # Warning: parsetag returns Union{String, Vector{String}}
     return 🧩
 end
 
@@ -209,8 +208,8 @@ julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
 (Dict{Any, Any}("class" => "fruit"), ["\$(attrs)"])
 ```
 """
-@inline parseattrs(io::IO) = parseattrs!(io, Dict{Any,Any}(), String[])  # Warning: attrs is assigned as Dict{Any, Any}
-@inline function parseattrs!(io::IO, attrs::AbstractDict, promises::Union{AbstractVector,Tuple})
+@inline parseattrs(io::IO) = parseattrs!(io, Dict{String,Any}(), String[])
+@inline function parseattrs!(io::IO, attrs::AbstractDict, promises::AbstractVector)
     while !eof(io)
         skipchars(isspace, io)
         startswith(io, ('>', '/')) && break
@@ -219,8 +218,9 @@ julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
     return attrs, promises
 end
 @inline function parseattr!(io::IO, attrs::AbstractDict)
-    key = skipstartswith(io, "\\\$") ? ("\$", parsekey(io)) : parsekey(io)
-    eof(io) && (attrs[key] = true; return)  # Warning: attrs is assigned as Union{Nothing, Dict{Any, Any}}
+    startswith(io, "\\\$") && skip(io, 1)  # no interps in keys: just ignore escaping
+    key = parsekey(io)
+    eof(io) && (attrs[key] = true; return attrs)
     let 🍒 = read(io, Char)
         attrs[key] = 🍒 === '=' ? parsevalue(io) : true
         🍒 ∈ ">/" && skip(io, -1)
@@ -258,13 +258,13 @@ julia> HTM.parsevalue(IOBuffer("\\"fruit\\">🍍..."))
         push!(🧩, skipstartswith(io, "\\\$") ? "\$" : parseinterp(∈((🥝, '$', '\\')), io))
     end
     skipchars(isequal(🥝), io)
-    length(🧩) == 1 && return first(🧩)
+    length(🧩) === 1 && return first(🧩)
     return 🧩
 end
 @inline function parseunquotedvalue(io::IO)
     startswith(io, "http") && return parseinterp(isspace ⩔ isequal('>'), io)
     let f = isspace ⩔ ∈(">/\$\\")
-        return skipstartswith(io, "\\\$") ? ("\$", readuntil(f, io)) : parseinterp(f, io)  # TODO: use parseinterp diretly here and in other places
+        return skipstartswith(io, "\\\$") ? ["\$", readuntil(f, io)] : parseinterp(f, io)
     end
 end
 

@@ -135,17 +135,17 @@ const r = Hyperscript.render
         @testset "As tags" begin
             @testset "Matching end-tag" begin
                 @testset "Complete tags" begin
-                    @test_throws MethodError htm"<$(nothing)></$(nothing)>" |> r == "<nothing></nothing>"
-                    @test_throws MethodError htm"<$(missing)></$(missing)>" |> r == "<missing></missing>"
-                    @test_throws MethodError htm"<$(1)></$(1)>" |> r == "<1></1>"
-                    @test_throws MethodError htm"<$(1.0)></$(1.0)>" |> r == "<1.0></1.0>"
-                    @test_throws MethodError htm"<$(true)></$(true)>" |> r == "<true></true>"
-                    @test_throws MethodError htm"<$(:symbol)></$(:symbol)>" |> r == "<symbol></symbol>"
+                    @test htm"<$(nothing)></$(nothing)>" |> r == "<nothing></nothing>"
+                    @test htm"<$(missing)></$(missing)>" |> r == "<missing></missing>"
+                    @test htm"<$(1)></$(1)>" |> r == "<1></1>"
+                    @test htm"<$(1.0)></$(1.0)>" |> r == "<1.0></1.0>"
+                    @test htm"<$(true)></$(true)>" |> r == "<true></true>"
+                    @test htm"<$(:symbol)></$(:symbol)>" |> r == "<symbol></symbol>"
                     @test htm"<$(\"string\")></$(\"string\")>" |> r == "<string></string>"
                     @test htm"<$([1, 2, 3])></$([1, 2, 3])>" |> r == "<123></123>"
                     @test htm"<$((1, 2, 3))></$((1, 2, 3))>" |> r == "<123></123>"
-                    @test_throws MethodError htm"<$(\"fruit\" => \"pineapple\")><//>" |> r == "<&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
-                    @test_throws MethodError htm"<$(Dict(\"fruit\" => \"pineapple\"))><//>" |> r == "<Dict&#123;String, Any&#125;&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></Dict&#123;String, Any&#125;&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                    @test htm"<$(\"fruit\" => \"pineapple\")></$(\"fruit\" => \"pineapple\")>" |> r == "<&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
+                    @test htm"<$(Dict(\"fruit\" => \"pineapple\"))></$(Dict(\"fruit\" => \"pineapple\"))>" |> r == "<Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
                 end
 
                 @testset "Partial tags" begin
@@ -165,17 +165,17 @@ const r = Hyperscript.render
 
             @testset "Universal end-tag" begin
                 @testset "Complete tags" begin
-                    @test_throws MethodError htm"<$(nothing)><//>" |> r == "<nothing></nothing>"
-                    @test_throws MethodError htm"<$(missing)><//>" |> r == "<missing></missing>"
-                    @test_throws MethodError htm"<$(1)><//>" |> r == "<1></1>"
-                    @test_throws MethodError htm"<$(1.0)><//>" |> r == "<1.0></1.0>"
-                    @test_throws MethodError htm"<$(true)><//>" |> r == "<true></true>"
-                    @test_throws MethodError htm"<$(:symbol)><//>" |> r == "<symbol></symbol>"
+                    @test htm"<$(nothing)><//>" |> r == "<nothing></nothing>"
+                    @test htm"<$(missing)><//>" |> r == "<missing></missing>"
+                    @test htm"<$(1)><//>" |> r == "<1></1>"
+                    @test htm"<$(1.0)><//>" |> r == "<1.0></1.0>"
+                    @test htm"<$(true)><//>" |> r == "<true></true>"
+                    @test htm"<$(:symbol)><//>" |> r == "<symbol></symbol>"
                     @test htm"<$(\"string\")><//>" |> r == "<string></string>"
                     @test htm"<$([1, 2, 3])><//>" |> r == "<123></123>"
                     @test htm"<$((1, 2, 3))><//>" |> r == "<123></123>"
-                    @test_throws MethodError htm"<$(\"fruit\" => \"pineapple\")><//>" |> r == "<&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
-                    @test_throws MethodError htm"<$(Dict(\"fruit\" => \"pineapple\"))><//>" |> r == "<Dict&#123;String, Any&#125;&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></Dict&#123;String, Any&#125;&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                    @test htm"<$(\"fruit\" => \"pineapple\")><//>" |> r == "<&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
+                    @test htm"<$(Dict(\"fruit\" => \"pineapple\"))><//>" |> r == "<Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
                 end
 
                 @testset "Partial tags" begin
@@ -236,16 +236,16 @@ const r = Hyperscript.render
     end
 
     @testset "Internal representation" begin
-        @test HTM.parsenode(IOBuffer("<div />")) == HTM.Node("div", Dict())
-        @test HTM.parsenode(IOBuffer("<div>Hi!</div>")) == HTM.Node("div", Dict(), (), ["Hi!"])
-        @test HTM.parsenode(IOBuffer("<div class=fruit />")) == HTM.Node("div", Dict("class" => "fruit"))
-        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi!</div>")) == HTM.Node("div", Dict("class" => "fruit"), (), ["Hi!"])
-        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi there!</div>")) == HTM.Node("div", Dict("class" => "fruit"), (), ["Hi there!"])
+        @test HTM.parsenode(IOBuffer("<div />")) == HTM.Node(["div"], Dict())
+        @test HTM.parsenode(IOBuffer("<div>Hi!</div>")) == HTM.Node(["div"], Dict(), String[], ["Hi!"])
+        @test HTM.parsenode(IOBuffer("<div class=fruit />")) == HTM.Node(["div"], Dict("class" => "fruit"))
+        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi!</div>")) == HTM.Node(["div"], Dict("class" => "fruit"), String[], ["Hi!"])
+        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi there!</div>")) == HTM.Node(["div"], Dict("class" => "fruit"), String[], ["Hi there!"])
 
-        @test HTM.parsenode(IOBuffer("<button class=fruit disabled />")) == HTM.Node("button", Dict("class" => "fruit", "disabled" => true))
-        @test HTM.parsenode(IOBuffer("<button class=fruit disabled>Click me</button>")) == HTM.Node("button", Dict("class" => "fruit", "disabled" => true), (), ["Click me"])
+        @test HTM.parsenode(IOBuffer("<button class=fruit disabled />")) == HTM.Node(["button"], Dict("class" => "fruit", "disabled" => true))
+        @test HTM.parsenode(IOBuffer("<button class=fruit disabled>Click me</button>")) == HTM.Node(["button"], Dict("class" => "fruit", "disabled" => true), String[], ["Click me"])
 
-        @test HTM.parsenode(IOBuffer("<circle fill=orange />")) == HTM.Node("circle", Dict("fill" => "orange"))
+        @test HTM.parsenode(IOBuffer("<circle fill=orange />")) == HTM.Node(["circle"], Dict("fill" => "orange"))
 
         @testset "Stress tests" begin
             quotes = ("", '"', '\'')
