@@ -25,7 +25,9 @@ You can sort rows by clicking on column headers (thanks to
 [`sorttable.js`](https://www.kryogenix.org/code/browser/sorttable/)).
 
 ```@example benchmarks
-htm"<script src=https://www.kryogenix.org/code/browser/sorttable/sorttable.js />"  # hide
+using HTM
+
+htm"<script src=https://www.kryogenix.org/code/browser/sorttable/sorttable.js />"
 ```
 
 ## Runtime and garbage collection
