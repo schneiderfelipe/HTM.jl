@@ -69,8 +69,8 @@ pkg> add https://github.com/schneiderfelipe/HTM.jl
 
 ## Usage
 
-[See the documentation](https://schneiderfelipe.xyz/HTM.jl/dev/) (I hope you
-like pineapples).
+[See the documentation](https://schneiderfelipe.xyz/HTM.jl/dev/usage/) (I hope
+you like pineapples).
 
 ## Project status
 
