@@ -50,7 +50,8 @@ julia> create_element("div", Dict("class" => "fruit"), "🍍")
 @inline processattrs(d::AbstractDict) = Dict(processattrs.(filter(isenabled∘last, collect(d))))
 
 @inline processattrs(🍎, ::Val) = processattrs(🍎)
-@inline processattrs(d::AbstractDict, ::Val{:style}) = *((string(first(p), ':', last(p), ';') for p in processattrs(d))...)
+@inline processattrs(d::AbstractDict, ::Val{:style}) = *((string(first(p), ':', last(p), ';') for p in processattrs(d))...)  # TODO: should we process first/last and not dict?
+@inline processattrs(v::AbstractVector, ::Val{:class}) = *((string(processattrs(c), ' ') for c in Set(v))...)  # TODO: remove space at the end?
 
 # Hide attributes if `false` or `nothing`, Hyperscript.jl uses `nothing` to
 # mean something else (empty attribute).
