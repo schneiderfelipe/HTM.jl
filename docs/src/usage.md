@@ -102,6 +102,24 @@ orange(text) = htm"<span style=\"background: orange\">$(text)</span>"
 htm"<p><strong>This is $(orange(\"really\")) important.</strong></p>"
 ```
 
+You can even use
+[`@html_str`](https://docs.julialang.org/en/v1/base/strings/#Base.Docs.@html_str)
+(from `Base.Docs`)
+and [`@md_str`](https://docs.julialang.org/en/v1/stdlib/Markdown/)
+from the [standard library](https://docs.julialang.org/en/v1/):
+
+```jldoctest
+julia> htm"<div>$(md\"# 🍍\")</div>"
+<div><p class="markdown"><h1> 🍍</h1></p></div>
+
+julia> htm"<p>🍍$(html\"&nbsp;\")🍌</p>"
+<p>🍍&nbsp;🍌</p>
+```
+
+!!! info
+    Using `@html_str` from the standard library as above is the recommended
+    strategy for bypassing escaping of HTML entities.
+
 Contrary to
 [JSX](https://reactjs.org/docs/jsx-in-depth.html#choosing-the-type-at-runtime)
 or

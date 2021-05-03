@@ -30,7 +30,7 @@ const r = Hyperscript.render
             @test htm"<div draggable=$(false) />" |> r == "<div></div>"
         end
 
-        @testset "HTML's optional quotes" begin
+        @testset "HTML optional quotes" begin
             @test htm"<div class=fruit></div>" |> r == "<div class=\"fruit\"></div>"
 
             @testset "URLs" begin
@@ -146,8 +146,9 @@ const r = Hyperscript.render
                 @test htm"<div>$(Dict(\"fruit\" => \"pineapple\"))</div>" |> r == "<div>Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;</div>"
 
                 @testset "Exotic objects" begin
-                    @test htm"<div>$(HTML(\"<div></div>\"))</div>" |> r == "<div><div></div></div>"
                     @test htm"<div>$(md\"# 🍍\")</div>" |> r == "<div><div class=\"markdown\"><h1>🍍</h1>\n</div></div>"
+                    @test htm"<div>$(html\"<div></div>\")</div>" |> r == "<div><div></div></div>"
+                    @test htm"<div>$(HTML(\"<div></div>\"))</div>" |> r == "<div><div></div></div>"
                 end
             end
 
@@ -253,6 +254,13 @@ const r = Hyperscript.render
 
             @test htm"<div \$(notvar)=\"fruit\" />" |> r == raw"""<div &#36;&#40;notvar&#41;="fruit"></div>"""
             @test_broken htm"<div class=\"\$(notvar)\" />" |> r == raw"""<div class="$(notvar)"></div>"""
+        end
+
+        @testset "HTML entity escape trick" begin
+            @test htm"<p>🍍 🍌</p>" |> r == "<p>🍍 🍌</p>"
+            @test htm"<p>🍍&nbsp;🍌</p>" |> r == "<p>🍍&#38;nbsp;🍌</p>"
+            @test htm"<p>🍍$(html\"&nbsp;\")🍌</p>" |> r == "<p>🍍&nbsp;🍌</p>"
+            @test htm"<p>🍍$(HTML(\"&nbsp;\"))🍌</p>" |> r == "<p>🍍&nbsp;🍌</p>"
         end
     end
 
