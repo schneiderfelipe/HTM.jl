@@ -60,7 +60,7 @@ const r = Hyperscript.render
 
         @testset "Styles" begin
             style = Dict("background" => "orange")
-            @test htm"<span style=$(style)>pineapple</span>" |> r == "<span style=\"background:orange\">pineapple</span>"
+            @test htm"<span style=$(style)>pineapple</span>" |> r == "<span style=\"background:orange;\">pineapple</span>"
         end
 
         @testset "Classes" begin

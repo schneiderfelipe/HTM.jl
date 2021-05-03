@@ -29,7 +29,7 @@ julia> create_element("div", Dict("class" => "fruit"), "🍍")
 @inline processtag(🍎) = 🍎
 @inline processtag(x::Expr) = :(processtag($(x)))
 @inline processtag(v::AbstractVector) = string(processtag.(v)...)
-@inline processtag(v::AbstractVector{T}) where {T<:AbstractString} = *(processtag.(v)...)  # TODO: benchmark this microoptimization by toggling comment
+@inline processtag(v::AbstractVector{T}) where {T<:AbstractString} = *(processtag.(v)...)
 
 @inline processchildren(🍎) = 🍎
 @inline processchildren(x::Expr) = :(processchildren($(x)))
@@ -46,11 +46,11 @@ julia> create_element("div", Dict("class" => "fruit"), "🍍")
 @inline processattrs(x::Expr, p::Expr) = (x = :(merge!($(x), $(p)...)); :(processattrs($(x))))  # promises update.
 @inline processattrs(b::Bool) = b ? nothing : error("should have been disabled")
 @inline processattrs(v::AbstractVector{T}) where {T<:AbstractString} = *(processattrs.(v)...)
-@inline processattrs(p::Pair) = (k = first(p); k => processattrs(last(p), Val(Symbol(k))))  # no interps in keys: use spread attributes
-@inline processattrs(d::AbstractDict) = Dict(processattrs.(collect(filter(isenabled∘last, d))))  # TODO: benchmark collect before/after filtering
+@inline processattrs(p::Pair) = (k = first(p); string(k) => processattrs(last(p), Val(Symbol(k))))  # no interps in keys: use spread attributes
+@inline processattrs(d::AbstractDict) = Dict(processattrs.(filter(isenabled∘last, collect(d))))
 
 @inline processattrs(🍎, ::Val) = processattrs(🍎)
-@inline processattrs(d::AbstractDict, ::Val{:style}) = rstrip(*((string(first(p), ':', last(p), ';') for p in processattrs(d))...), ';')  # TODO: benchmark with/without rstrip
+@inline processattrs(d::AbstractDict, ::Val{:style}) = *((string(first(p), ':', last(p), ';') for p in processattrs(d))...)
 
 # Hide attributes if `false` or `nothing`, Hyperscript.jl uses `nothing` to
 # mean something else (empty attribute).
@@ -88,7 +88,6 @@ end
     return toexpr(first(v))
 end
 
-# TODO: put most common case at the beginning of all ifs in HTM.jl
 @inline function toexpr(🍍::Node)
     # TODO: can tag be empty? See <https://pt-br.reactjs.org/docs/fragments.html#short-syntax> for a usage.
     tag = isempty(🍍.tag) ? "" : processtag(toexprvec(🍍.tag))
@@ -179,10 +178,7 @@ HTM.Node(["div"], Dict("class" => ["fruit"]), String[], Union{String, HTM.Node}[
     skipchars(isequal('<'), io)
     tag = parsetag(io)
     attrs, promises = parseattrs(io)
-    if read(io, Char) === '/'
-        skipchars(isequal('>'), io)
-        return Node(tag, attrs, promises)
-    end
+    read(io, Char) === '/' && (skipchars(isequal('>'), io); return Node(tag, attrs, promises))
     endtag = string("</", processtag(tag), '>')
     children = parseelems(io -> !(startswith(io, endtag) || startswith(io, UNIVERSALENDTAG)), io)
     skipstartswith(io, endtag) || skipstartswith(io, UNIVERSALENDTAG) || error("tag not properly closed")
@@ -301,6 +297,9 @@ julia> HTM.parseinterp(IOBuffer(raw"$((1, (2, 3)))..."))
     buf = IOBuffer()
     write(buf, read(io, Char))
     (eof(io) || isspace(peek(io, Char))) && return "\$"  # frustrated interp
+    # TODO: should we call Meta.parse here and avoid this while? This would
+    # require returning Expr, which might be good for removing some duty from
+    # strings.
     if startswith(io, '(')
         n = 1
         write(buf, read(io, Char))
