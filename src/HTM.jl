@@ -33,6 +33,7 @@ julia> create_element("div", Dict("class" => "fruit"), "🍍")
 
 @inline processchildren(🍎) = 🍎
 @inline processchildren(x::Expr) = :(processchildren($(x)))
+@inline processchildren(b::Bool) = nothing
 
 @inline processattrs(🍎) = 🍎
 # TODO: this merge is a pain. What I want:

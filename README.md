@@ -49,6 +49,7 @@ and [Hypertext Literal](https://github.com/observablehq/htl):
 - Spread attributes: `htm"<div $(attrs)></div>"`
 - Self-closing tags: `htm"<div />"`
 - Multiple root elements (fragments): `htm"<div /><div />"`
+- Short circuit rendering: `htm"<div>$(hidefruit || \"🍍\")</div>"`
 - Boolean attributes: `htm"<div draggable />"` or `htm"<div draggable=$(true) />"`
 - HTML optional quotes: `htm"<div class=fruit></div>"`
 - Styles: `htm"<div style=$(style)></div>"`

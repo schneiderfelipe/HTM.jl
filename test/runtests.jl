@@ -24,6 +24,13 @@ const r = Hyperscript.render
             @test htm"<div /><div />" == [htm"<div />", htm"<div />"]
         end
 
+        @testset "Short circuit rendering" begin
+            @test htm"<div>$(true || \"🍍\")</div>" |> r == "<div></div>"
+            @test htm"<div>$(false || \"🍍\")</div>" |> r == "<div>🍍</div>"
+            @test htm"$(true || \"🍍\")" === true
+            @test htm"$(false || \"🍍\")" == "🍍"
+        end
+
         @testset "Boolean attributes" begin
             @test htm"<div draggable />" |> r == "<div draggable></div>"
             @test htm"<div draggable=$(true) />" |> r == "<div draggable></div>"
@@ -137,7 +144,7 @@ const r = Hyperscript.render
                 @test htm"<div>$(missing)</div>" |> r == "<div>missing</div>"
                 @test htm"<div>$(1)</div>" |> r == "<div>1</div>"
                 @test htm"<div>$(1.0)</div>" |> r == "<div>1.0</div>"
-                @test htm"<div>$(true)</div>" |> r == "<div>true</div>"
+                @test htm"<div>$(true)</div>" |> r == "<div></div>"
                 @test htm"<div>$(:symbol)</div>" |> r == "<div>symbol</div>"
                 @test htm"<div>$(\"string\")</div>" |> r == "<div>string</div>"
                 @test htm"<div>$([1, 2, 3])</div>" |> r == "<div>123</div>"
