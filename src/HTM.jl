@@ -1,219 +1,288 @@
 module HTM
 
-# We say,            Hyperscript.jl says,
-# `tag` or `Tag`      => `Node`
-# `type` or `tagtype` => `tag`
-# `props` (property)  => `attrs` (attribute)
-using Hyperscript: Node, DEFAULT_HTMLSVG_CONTEXT
+using Hyperscript
 
 export create_element
-export process
+export processtag, processattrs, processchildren
 export @htm_str
+
+const UNIVERSALENDTAG = "<//>"
 
 include("utils.jl")
 
 """
-    create_element(type[, children...])
-    create_element(type, props[, children...])
+    create_element(tag, attrs[, children...])
 
 Create a Hyperscript.jl element.
 
 This is an alternative syntax and (currently) serves as a rather trivial
 absctraction layer inspired by
 [`React.createElement`](https://pt-br.reactjs.org/docs/react-api.html#createelement).
+
+```jldoctest
+julia> create_element("div", Dict("class" => "fruit"), "🍍")
+<div class="fruit">🍍</div>
+```
 """
-create_element(type, children...) = create_element(type, (), children...)
-create_element(type, props, children...) = Node(DEFAULT_HTMLSVG_CONTEXT, type, children, props)
+@inline create_element(tag, attrs, children...) = Hyperscript.Node(Hyperscript.DEFAULT_HTMLSVG_CONTEXT, tag, children, attrs)
 
-process(🍎) = 🍎
-process(v::Union{AbstractVector,Tuple}) = string(process.(v)...)
-process(d::AbstractDict) = Dict{String,Any}(process(k) => process(v) for (k, v) ∈ d if isenabled(v))
-process(b::Bool) = b ? nothing : error("should have been disabled")
+@inline processtag(🍎) = 🍎
+@inline processtag(x::Expr) = :(processtag($(x)))
+@inline processtag(v::AbstractVector) = string(processtag.(v)...)
+@inline processtag(v::AbstractVector{T}) where {T<:AbstractString} = *(processtag.(v)...)  # TODO: benchmark this microoptimization by toggling comment
 
-# We hide props if `false` or `nothing`, Hyperscript.jl uses `nothing` to
-# mean something else (empty prop).
-isenabled(🍎) = true
-isenabled(b::Bool) = b
-isenabled(::Nothing) = false
+@inline processchildren(🍎) = 🍎
+@inline processchildren(x::Expr) = :(processchildren($(x)))
+
+@inline processattrs(🍎) = 🍎
+# TODO: this merge is a pain. What I want:
+# - say goodbye to promises and use a single variable for attributes
+# - this variable should be able to hold pairs, dicts, etc. and create a dict
+# in order
+# - this will ensure we can support precedence (currently spread attributes
+# always take precedence, no matter where they are given.
+# - same philosophy as with tags and children: store objects as they are,
+# handle later.
+@inline processattrs(x::Expr, p::Expr) = (x = :(merge!($(x), $(p)...)); :(processattrs($(x))))  # promises update.
+@inline processattrs(b::Bool) = b ? nothing : error("should have been disabled")
+@inline processattrs(v::AbstractVector{T}) where {T<:AbstractString} = *(processattrs.(v)...)
+@inline processattrs(p::Pair) = (k = first(p); k => processattrs(last(p), Val(Symbol(k))))  # no interps in keys: use spread attributes
+@inline processattrs(d::AbstractDict) = Dict(processattrs.(collect(filter(isenabled∘last, d))))  # TODO: benchmark collect before/after filtering
+
+@inline processattrs(🍎, ::Val) = processattrs(🍎)
+@inline processattrs(d::AbstractDict, ::Val{:style}) = rstrip(*((string(first(p), ':', last(p), ';') for p in processattrs(d))...), ';')  # TODO: benchmark with/without rstrip
+
+# Hide attributes if `false` or `nothing`, Hyperscript.jl uses `nothing` to
+# mean something else (empty attribute).
+@inline isenabled(🍎) = true
+@inline isenabled(::Nothing) = false
+@inline isenabled(b::Bool) = b
 
 """
-    Tag(type, props[, promises=(), children=()])
+    Node(tag, attrs, promises=String[], children=Union{String, HTM.Node}[])
 
-Compile time internal representation of an HTML tag.
+Compile time internal representation of an HTML node.
+
+```jldoctest
+julia> HTM.Node(["div"], Dict("class" => ["fruit"]), [], ["🍍"])
+HTM.Node(["div"], Dict("class" => ["fruit"]), String[], Union{String, HTM.Node}["🍍"])
+```
 """
-struct Tag{T<:Union{AbstractString,Tuple},A<:AbstractDict,P<:Union{AbstractVector,Tuple},C<:Union{AbstractVector,Tuple}}
-    type::T
-    props::A
-    promises::P
-    children::C
-    Tag(type, props, promises=(), children=()) = new{typeof(type),typeof(props),typeof(promises),typeof(children)}(type, props, promises, children)
+struct Node
+    tag::Vector{String}
+    attrs::Dict{String,Vector{String}}
+    promises::Vector{String}
+    children::Vector{Union{String, HTM.Node}}
+    Node(tag, attrs, promises=String[], children=Union{String, HTM.Node}[]) = new(tag, attrs, promises, children)
 end
-Base.:(==)(🍍::Tag, 🍌::Tag) = 🍍.type == 🍌.type && 🍍.props == 🍌.props && all(🍍.promises .== 🍌.promises) && all(🍍.children .== 🍌.children)
+Base.:(==)(🍍::Node, 🍌::Node) = 🍍.tag == 🍌.tag && 🍍.attrs == 🍌.attrs && 🍍.promises == 🍌.promises && 🍍.children == 🍌.children
 
 macro htm_str(s)
     htm = parse(s)
-    esc(toexpr(htm))
+    esc(toexprmacro(htm))
 end
 
-toexpr(🍎) = 🍎
-@inline function toexpr(🍍::Tag)
-    type = toexpr(🍍.type)
-    type isa AbstractString || (type = :(process($(type))))
-
-    if !isempty(🍍.props)
-        props = toexpr(🍍.props)
-        if !isempty(🍍.promises)
-            # TODO: this branch has no tests!
-            promises = toexpr(🍍.promises)
-            props = :(merge($(props), $(promises)...))
-        end
-        props = :(process($(props)))
-    elseif !isempty(🍍.promises)
-        promises = toexpr(🍍.promises)
-        props = :(merge($(promises)...))
-        props = :(process($(props)))
-    else
-        props = ()
-    end
-
-    if !isempty(🍍.children)
-        children = toexpr(🍍.children)
-        # (children = :(process($(children))))
-    else
-        children = ()
-    end
-
-    return :(create_element($(type), $(props), $(children)))
+@inline function toexprmacro(v::AbstractVector)
+    length(v) > 1 && return toexpr(v)
+    isempty(v) && return nothing
+    return toexpr(first(v))
 end
-@inline toexpr(s::AbstractString) = startswith(s, '$') ? Meta.parse(s[nextind(s, begin):end]) : s
-@inline toexpr(v::Union{AbstractVector,Tuple}) = :(($(toexpr.(v)...),))
+
+# TODO: put most common case at the beginning of all ifs in HTM.jl
+@inline function toexpr(🍍::Node)
+    # TODO: can tag be empty? See <https://pt-br.reactjs.org/docs/fragments.html#short-syntax> for a usage.
+    tag = isempty(🍍.tag) ? "" : processtag(toexprvec(🍍.tag))
+    attrs = (isempty(🍍.attrs) && isempty(🍍.promises)) ? Dict{String,Any}() : processattrs(toexpr(🍍.attrs), toexprvec(🍍.promises))
+    children = isempty(🍍.children) ? Any[] : processchildren(toexpr(🍍.children))
+    return :(create_element($(tag), $(attrs), $(children)))
+end
+@inline toexpr(s::AbstractString) = (length(s) > 1 && startswith(s, '$')) ? Meta.parse(s[nextind(s, begin):end]) : s
+@inline toexpr(v::AbstractVector) = length(v) == 1 ? :($(toexpr(first(v)))) : toexprvec(v)
+@inline toexpr(p::Pair) = (v = last(p); :($(first(p)) => $(length(v) > 1 ? toexpr(v) : toexpr(first(v)))))  # no interps in keys
 @inline toexpr(d::AbstractDict) = :(Dict($(toexpr(collect(d)))))
-@inline toexpr(p::Pair) = :($(toexpr(first(p))) => $(toexpr(last(p))))
 
-"""
-    parse(io::IO)
+@inline toexprvec(v::AbstractVector) = :([$(toexpr.(v)...)])
+
+@doc raw"""
     parse(s::AbstractString)
+    parse(io::IO)
 
 Parse HTML.
+
+```jldoctest
+julia> HTM.parse("pineapple: <div class=\\"fruit\\">🍍</div>...")
+3-element Vector{Union{String, HTM.Node}}:
+ "pineapple: "
+ HTM.Node(["div"], Dict("class" => ["fruit"]), String[], Union{String, HTM.Node}["🍍"])
+ "..."
+```
 """
-@inline function parse(io::IO)
-    elems = parseelems(io)
-    isempty(elems) && return nothing
-    length(elems) == 1 && return only(elems)
-    return elems
-end
+@inline parse(io::IO) = parseelems(io)
 @inline parse(s::AbstractString) = parse(IOBuffer(s))
 
 # --- HTML specification ---
 
-"""
+@doc raw"""
     parseelems(io::IO)
 
 Parse HTML elements.
 
 This function is the entry point for an implementation of a subset of the
 [HTML standard](https://html.spec.whatwg.org/multipage/parsing.html#tokenization).
+
+```jldoctest
+julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."))
+3-element Vector{Union{String, HTM.Node}}:
+ "pineapple: "
+ HTM.Node(["div"], Dict("class" => ["fruit"]), String[], Union{String, HTM.Node}["🍍"])
+ "..."
+```
 """
 @inline parseelems(io::IO) = parseelems(io -> true, io)
-@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, [])
-@inline function parseelems!(predicate, io::IO, elems::Union{AbstractVector,Tuple})
+@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, Union{String, HTM.Node}[])
+@inline function parseelems!(predicate, io::IO, elems::AbstractVector)
     while !eof(io) && predicate(io)
-        push!(elems, parseelem(io))
+        pushelem!(elems, parseelem(io))
     end
     return elems
 end
+@inline pushelem!(elems::AbstractVector, elem) = push!(elems, elem)
+@inline pushelem!(elems::AbstractVector, elem::AbstractString) = (isempty(elem) || all(isspace, elem)) ? elems : push!(elems, elem)  # TODO: detect all spaces during reading for performance
 
-"""
+@doc raw"""
     parseelem(io::IO)
 
 Parse a single HTML element.
+
+```jldoctest
+julia> HTM.parseelem(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."))
+"pineapple: "
+```
 """
 @inline function parseelem(io::IO)
-    startswith(io, '<') && return parsetag(io)
-    skipstartswith(io, "\\\$") && return '$'
-    return parseinterp(🍒 -> 🍒 ∈ ('<', '$', '\\'), io)
+    startswith(io, '<') && return parsenode(io)
+    skipstartswith(io, "\\\$") && return "\$"  # frustrated interp
+    return parseinterp(∈("<\$\\"), io)
 end
 
-"""
-    parsetag(io::IO)
+@doc raw"""
+    parsenode(io::IO)
 
-Parse a `Tag` object.
+Parse a `Node` object.
+
+```jldoctest
+julia> HTM.parsenode(IOBuffer("<div class=\\"fruit\\">🍍</div>..."))
+HTM.Node(["div"], Dict("class" => ["fruit"]), String[], Union{String, HTM.Node}["🍍"])
+```
 """
-@inline function parsetag(io::IO)
+@inline function parsenode(io::IO)
     skipchars(isequal('<'), io)
-    type = skipstartswith(io, "\\\$") ? ('$', parsetagtype(io)) : parsetagtype(io)
-    props, promises = parseprops(io)
+    tag = parsetag(io)
+    attrs, promises = parseattrs(io)
     if read(io, Char) === '/'
         skipchars(isequal('>'), io)
-        return Tag(type, props, promises)
+        return Node(tag, attrs, promises)
     end
-    endtag = "</$(type)>"
-    children = parseelems(io -> !startswith(io, endtag), io)
-    skipstartswith(io, endtag) || error("tag not properly closed")
-    return Tag(type, props, promises, children)
+    endtag = string("</", processtag(tag), '>')
+    children = parseelems(io -> !(startswith(io, endtag) || startswith(io, UNIVERSALENDTAG)), io)
+    skipstartswith(io, endtag) || skipstartswith(io, UNIVERSALENDTAG) || error("tag not properly closed")
+    return Node(tag, attrs, promises, children)
 end
 
-"""
-    parsetagtype(io::IO)
+@doc raw"""
+    parsetag(io::IO)
 
-Parse an HTML tag type.
-"""
-@inline parsetagtype(io::IO) = readuntil(🍒 -> isspace(🍒) || 🍒 ∈ ('>', '/'), io)
+Parse an HTML tag.
 
+```jldoctest
+julia> HTM.parsetag(IOBuffer("div class=\\"fruit\\">🍍..."))
+1-element Vector{String}:
+ "div"
+```
 """
-    parseprops(io::IO)
+@inline function parsetag(io::IO)
+    🧩 = String[]
+    while !(eof(io) || (🍒 = peek(io, Char)) |> isspace || 🍒 ∈ ">/")
+        push!(🧩, skipstartswith(io, "\\\$") ? "\$" : parseinterp(isspace ⩔ ∈(">/\$\\"), io))
+    end
+    return 🧩
+end
 
-Parse HTML properties of a tag.
+@doc raw"""
+    parseattrs(io::IO)
+
+Parse HTML attributes of a node.
+The returned tuple contains both true attributes and promisses.
+
+```jldoctest
+julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\">🍍..."))
+(Dict("class" => ["fruit"]), String[])
+
+julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
+(Dict("class" => ["fruit"]), ["\$(attrs)"])
+```
 """
-@inline parseprops(io::IO) = parseprops!(io, Dict(), String[])
-@inline function parseprops!(io::IO, props::AbstractDict, promises::Union{AbstractVector,Tuple})
+@inline parseattrs(io::IO) = parseattrs!(io, Dict{String,Vector{String}}(), String[])
+@inline function parseattrs!(io::IO, attrs::AbstractDict, promises::AbstractVector)
     while !eof(io)
         skipchars(isspace, io)
         startswith(io, ('>', '/')) && break
-        startswith(io, '$') ? push!(promises, parseinterp(io)) : (props = parseprop!(io, props))
+        startswith(io, '$') ? push!(promises, parseinterp(io)) : (attrs = parseattr!(io, attrs))
     end
-    return props, promises
+    return attrs, promises
 end
-@inline function parseprop!(io::IO, props::AbstractDict)
-    key = skipstartswith(io, "\\\$") ? ('$', parsekey(io)) : parsekey(io)
-    eof(io) && (props[key] = true; return)
+@inline function parseattr!(io::IO, attrs::AbstractDict)
+    startswith(io, "\\\$") && skip(io, 1)  # no interps in keys: just ignore escaping
+    key = parsekey(io)
+    eof(io) && (attrs[key] = [raw"$(true)"]; return attrs)
     let 🍒 = read(io, Char)
-        props[key] = 🍒 === '=' ? parsevalue(io) : true
-        🍒 ∈ ('>', '/') && skip(io, -1)
+        attrs[key] = 🍒 === '=' ? parsevalue(io) : [raw"$(true)"]
+        🍒 ∈ ">/" && skip(io, -1)
     end
-    return props
+    return attrs
 end
 
-"""
+@doc raw"""
     parsekey(io::IO)
 
-Parse an HTML property key.
-"""
-@inline parsekey(io::IO) = readuntil(🍒 -> isspace(🍒) || 🍒 ∈ ('=', '>', '/'), io)
+Parse an HTML attribute key.
 
+```jldoctest
+julia> HTM.parsekey(IOBuffer("class=\\"fruit\\">🍍..."))
+"class"
+```
 """
+@inline parsekey(io::IO) = readuntil(isspace ⩔ ∈("=>/"), io)
+
+@doc raw"""
     parsevalue(io::IO)
 
-Parse an HTML property value.
+Parse an HTML attribute value.
+
+```jldoctest
+julia> HTM.parsevalue(IOBuffer("\\"fruit\\">🍍..."))
+1-element Vector{String}:
+ "fruit"
+```
 """
-@inline parsevalue(io::IO) = (skipchars(isspace, io); startswith(io, ('"', '\'')) ? parsequotedvalue(io) : parseunquotedvalue(io))
+@inline parsevalue(io::IO) = startswith(io, ('"', '\'')) ? parsequotedvalue(io) : parseunquotedvalue(io)
 @inline function parsequotedvalue(io::IO)
     🥝 = read(io, Char)
-    🧩 = []
+    🧩 = String[]
     while !(eof(io) || startswith(io, 🥝))
-        push!(🧩, skipstartswith(io, "\\\$") ? '$' : parseinterp(🍒 -> 🍒 ∈ (🥝, '$', '\\'), io))
+        push!(🧩, skipstartswith(io, "\\\$") ? "\$" : parseinterp(∈((🥝, '$', '\\')), io))
     end
     skipchars(isequal(🥝), io)
-    length(🧩) == 1 && return only(🧩)
     return 🧩
 end
 @inline function parseunquotedvalue(io::IO)
-    let f(🍒) = isspace(🍒) || 🍒 ∈ ('>', '/', '$', '\\')
-        return skipstartswith(io, "\\\$") ? ('$', readuntil(f, io)) : parseinterp(f, io)
+    startswith(io, "http") && return [parseinterp(isspace ⩔ isequal('>'), io)]
+    let f = isspace ⩔ ∈(">/\$\\")
+        return skipstartswith(io, "\\\$") ? ["\$", readuntil(f, io)] : [parseinterp(f, io)]
     end
 end
 
-raw"""
+@doc raw"""
     parseinterp(io::IO)
     parseinterp(fallback, io::IO)
 
@@ -222,11 +291,16 @@ Parse an interpolation as string, including `$`.
 The input must start with `$` if no fallback function is given.
 The fallback function is passed to `readuntil` if the input does not start
 with `$`.
+
+```jldoctest
+julia> HTM.parseinterp(IOBuffer(raw"$((1, (2, 3)))..."))
+"\$((1, (2, 3)))"
+```
 """
 @inline function parseinterp(io::IO)
     buf = IOBuffer()
     write(buf, read(io, Char))
-    (eof(io) || isspace(peek(io, Char))) && return '$'  # frustrated interp
+    (eof(io) || isspace(peek(io, Char))) && return "\$"  # frustrated interp
     if startswith(io, '(')
         n = 1
         write(buf, read(io, Char))
@@ -240,7 +314,7 @@ with `$`.
             write(buf, 🍒)
         end
     else
-        write(buf, readuntil(🍒 -> isspace(🍒) || 🍒 ∈ ('<', '>', '/', '"', '\'', '=', '$', '\\'), io))
+        write(buf, readuntil(isspace ⩔ ∈("<>/\"\'=\$\\"), io))
     end
     return String(take!(buf))
 end

@@ -15,10 +15,11 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Guide" => "guide.md",
+        "Usage" => "usage.md",
         "Design" => "design.md",
+        "Benchmarks" => "benchmarks.md",
         "Related packages" => "related.md",
-        "Docstrings" => "autodocs.md",
+        "Internals" => "autodocs.md",
     ],
 )
 
