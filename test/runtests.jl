@@ -8,6 +8,7 @@ using HTM
 const r = Hyperscript.render
 
 @testset "HTM.jl" begin
+    # Warning: some test cases may not represent supported usage.
     @testset "Features" begin
         @testset "Spread attributes" begin
             attrs = Dict("class" => "fruit")
@@ -96,9 +97,8 @@ const r = Hyperscript.render
             end
 
             @testset "As attributes" begin
-                @testset "As keys" begin
-                    key = "class"
-                    @test_throws MethodError htm"<div $(key)=fruit></div>" |> r == "<div class=\"fruit\"></div>"
+                @testset "As keys" for key in ("class", :class, nothing, true, missing, 1, 1.0, [1, 2, 3], (1, 2, 3), "fruit" => "pineapple")
+                    @test_throws MethodError htm"<div $(key)=fruit></div>"
                 end
 
                 @testset "As values" begin
@@ -132,7 +132,6 @@ const r = Hyperscript.render
         end
 
         @testset "Literals" begin
-            # TODO: some of the test cases do not represent supported usage
             @testset "As children" begin
                 @test htm"<div>$(nothing)</div>" |> r == "<div></div>"
                 @test htm"<div>$(missing)</div>" |> r == "<div>missing</div>"
@@ -154,17 +153,6 @@ const r = Hyperscript.render
 
             @testset "As attributes" begin
                 @testset "As keys" begin
-                    # TODO: use for loops for checking MethodError with different types
-                    @test_throws MethodError htm"<div $(nothing)=fruit></div>" |> r == "<div nothing=\"fruit\"></div>"
-                    @test_throws MethodError htm"<div $(missing)=fruit></div>" |> r == "<div missing=\"fruit\"></div>"
-                    @test_throws MethodError htm"<div $(1)=fruit></div>" |> r == "<div 1=\"fruit\"></div>"
-                    @test_throws MethodError htm"<div $(1.0)=fruit></div>" |> r == "<div 1.0=\"fruit\"></div>"
-                    @test_throws MethodError htm"<div $(true)=fruit></div>" |> r == "<div true></div>"
-                    @test_throws MethodError htm"<div $(:symbol)=fruit></div>" |> r == "<div symbol=\"fruit\"></div>"
-                    @test_throws MethodError htm"<div $(\"string\")=fruit></div>" |> r == "<div string=\"fruit\"></div>"
-                    @test_throws MethodError htm"<div $([1, 2, 3])=fruit></div>" |> r == "<div 123=\"fruit\"></div>"
-                    @test_throws MethodError htm"<div $((1, 2, 3))=fruit></div>" |> r == "<div 123=\"fruit\"></div>"
-                    @test_throws MethodError htm"<div $(\"fruit\" => \"pineapple\")=fruit></div>" |> r == "<div &#34;fruit&#34; =&#62; &#34;pineapple&#34;=\"fruit\"></div>"
                     @test htm"<div $(Dict(\"fruit\" => \"pineapple\"))=fruit></div>" |> r == "<div fruit=\"pineapple\" =\"fruit\"></div>"
                 end
 
