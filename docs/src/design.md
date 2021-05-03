@@ -26,7 +26,7 @@ element tree:
 
 ```jldoctest
 julia> @macroexpand htm"<span />"
-:(create_element("span", (), ()))
+:(create_element(processtag(["span"]), Dict{String, Any}(), Any[]))
 ```
 
 The overhead is small when compared to using Hyperscript.jl directly:

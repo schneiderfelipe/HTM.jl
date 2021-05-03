@@ -51,11 +51,13 @@ true
 
 Multiple top-level elements
 (["document fragments"](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment))
-are represented as tuples:
+are represented as arrays:
 
 ```jldoctest
 julia> htm"<div /><div />"
-(<div></div>, <div></div>)
+2-element Vector{Hyperscript.Node{Hyperscript.HTMLSVG}}:
+ <div></div>
+ <div></div>
 ```
 
 ### Objects as elements

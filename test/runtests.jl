@@ -20,7 +20,7 @@ const r = Hyperscript.render
         end
 
         @testset "Multiple root elements (fragments)" begin
-            @test htm"<div /><div />" == (htm"<div />", htm"<div />")
+            @test htm"<div /><div />" == [htm"<div />", htm"<div />"]
         end
 
         @testset "Boolean attributes" begin
@@ -62,6 +62,11 @@ const r = Hyperscript.render
             @test htm"<span style=$(style)>pineapple</span>" |> r == "<span style=\"background:orange\">pineapple</span>"
         end
 
+        @testset "Classes" begin
+            @test_broken htm"<div class=$([1, 2, 3, 3])></div>" |> r == "<div class=\"1 2 3\"></div>"
+            @test_broken htm"<div class=$((1, 2, 3, 3))></div>" |> r == "<div class=\"1 2 3\"></div>"
+        end
+
         @testset "Callbacks" begin
             @test_broken htm"<button onclick=$(() -> pineapples += 1)>🍍</button>" |> r == "<button onclick=\"pineapples += 1\">🍍</button>"
         end
@@ -71,7 +76,8 @@ const r = Hyperscript.render
         @test htm"<div>🍍</div>" isa Hyperscript.Node
         @test htm"🍍" isa String
         @test htm"" === nothing
-        @test htm"<div /><div />" isa Tuple
+        @test htm"<div /><div />" isa Vector{Hyperscript.Node{Hyperscript.HTMLSVG}}
+        @test htm"🍍<div />" isa Vector{Any}
     end
 
     @testset "Whitespace" begin
@@ -83,113 +89,153 @@ const r = Hyperscript.render
     end
 
     @testset "Interpolations" begin
-        @testset "As children" begin
-            @test htm"<div>$(nothing)</div>" |> r == "<div></div>"
-            @test htm"<div>$(missing)</div>" |> r == "<div>missing</div>"
-            @test htm"<div>$(1)</div>" |> r == "<div>1</div>"
-            @test htm"<div>$(1.0)</div>" |> r == "<div>1.0</div>"
-            @test htm"<div>$(true)</div>" |> r == "<div>true</div>"
-            @test htm"<div>$(:symbol)</div>" |> r == "<div>symbol</div>"
-            @test htm"<div>$(\"string\")</div>" |> r == "<div>string</div>"
-            @test htm"<div>$([1, 2, 3])</div>" |> r == "<div>123</div>"
-            @test htm"<div>$((1, 2, 3))</div>" |> r == "<div>123</div>"
-            @test htm"<div>$(\"fruit\" => \"pineapple\")</div>" |> r == "<div>&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;</div>"
-            @test htm"<div>$(Dict(\"fruit\" => \"pineapple\"))</div>" |> r == "<div>Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;</div>"
+        @testset "Variables" begin
+            @testset "As children" begin
+                child = "🍍"
+                @test htm"<div>$(child)</div>" |> r == "<div>🍍</div>"
+            end
 
-            @testset "Exotic objects" begin
-                @test htm"<div>$(HTML(\"<div></div>\"))</div>" |> r == "<div><div></div></div>"
-                @test htm"<div>$(md\"# 🍍\")</div>" |> r == "<div><div class=\"markdown\"><h1>🍍</h1>\n</div></div>"
+            @testset "As attributes" begin
+                @testset "As keys" begin
+                    key = "class"
+                    @test_throws MethodError htm"<div $(key)=fruit></div>" |> r == "<div class=\"fruit\"></div>"
+                end
+
+                @testset "As values" begin
+                    value = "fruit"
+                    @test htm"<div class=$(value)></div>" |> r == "<div class=\"fruit\"></div>"
+                end
+            end
+
+            @testset "As tags" begin
+                tag = "div"
+                @testset "Matching end-tag" begin
+                    @testset "Complete tags" begin
+                        @test htm"<$(tag)></$(tag)>" |> r == "<div></div>"
+                    end
+
+                    @testset "Partial tags" begin
+                        @test htm"<h$(tag)></h$(tag)>" |> r == "<hdiv></hdiv>"
+                    end
+                end
+
+                @testset "Universal end-tag" begin
+                    @testset "Complete tags" begin
+                        @test htm"<$(tag)><//>" |> r == "<div></div>"
+                    end
+
+                    @testset "Partial tags" begin
+                        @test htm"<h$(tag)><//>" |> r == "<hdiv></hdiv>"
+                    end
+                end
             end
         end
 
-        @testset "As attributes" begin
-            @testset "As keys" begin
-                @test_throws MethodError htm"<div $(nothing)=fruit></div>" |> r == "<div nothing=\"fruit\"></div>"
-                @test_throws MethodError htm"<div $(missing)=fruit></div>" |> r == "<div missing=\"fruit\"></div>"
-                @test_throws MethodError htm"<div $(1)=fruit></div>" |> r == "<div 1=\"fruit\"></div>"
-                @test_throws MethodError htm"<div $(1.0)=fruit></div>" |> r == "<div 1.0=\"fruit\"></div>"
-                @test_throws MethodError htm"<div $(true)=fruit></div>" |> r == "<div true></div>"
-                @test_throws MethodError htm"<div $(:symbol)=fruit></div>" |> r == "<div symbol=\"fruit\"></div>"
-                @test_throws MethodError htm"<div $(\"string\")=fruit></div>" |> r == "<div string=\"fruit\"></div>"
-                @test_throws MethodError htm"<div $([1, 2, 3])=fruit></div>" |> r == "<div 123=\"fruit\"></div>"
-                @test_throws MethodError htm"<div $((1, 2, 3))=fruit></div>" |> r == "<div 123=\"fruit\"></div>"
-                @test_throws MethodError htm"<div $(\"fruit\" => \"pineapple\")=fruit></div>" |> r == "<div &#34;fruit&#34; =&#62; &#34;pineapple&#34;=\"fruit\"></div>"
-                @test htm"<div $(Dict(\"fruit\" => \"pineapple\"))=fruit></div>" |> r == "<div fruit=\"pineapple\" =\"fruit\"></div>"
-            end
+        @testset "Literals" begin
+            # TODO: some of the test cases do not represent supported usage
+            @testset "As children" begin
+                @test htm"<div>$(nothing)</div>" |> r == "<div></div>"
+                @test htm"<div>$(missing)</div>" |> r == "<div>missing</div>"
+                @test htm"<div>$(1)</div>" |> r == "<div>1</div>"
+                @test htm"<div>$(1.0)</div>" |> r == "<div>1.0</div>"
+                @test htm"<div>$(true)</div>" |> r == "<div>true</div>"
+                @test htm"<div>$(:symbol)</div>" |> r == "<div>symbol</div>"
+                @test htm"<div>$(\"string\")</div>" |> r == "<div>string</div>"
+                @test htm"<div>$([1, 2, 3])</div>" |> r == "<div>123</div>"
+                @test htm"<div>$((1, 2, 3))</div>" |> r == "<div>123</div>"
+                @test htm"<div>$(\"fruit\" => \"pineapple\")</div>" |> r == "<div>&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;</div>"
+                @test htm"<div>$(Dict(\"fruit\" => \"pineapple\"))</div>" |> r == "<div>Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;</div>"
 
-            @testset "As values" begin
-                @test htm"<div key=$(nothing)></div>" |> r == "<div></div>"
-                @test_throws TypeError htm"<div key=$(missing)></div>" |> r == "<div key=\"missing\"></div>"
-                @test htm"<div key=$(1)></div>" |> r == "<div key=\"1\"></div>"
-                @test htm"<div key=$(1.0)></div>" |> r == "<div key=\"1.0\"></div>"
-                @test htm"<div key=$(true)></div>" |> r == "<div key></div>"
-                @test htm"<div key=$(:symbol)></div>" |> r == "<div key=\"symbol\"></div>"
-                @test htm"<div key=$(\"string\")></div>" |> r == "<div key=\"string\"></div>"
-                @test htm"<div key=$([1, 2, 3])></div>" |> r == "<div key=\"123\"></div>"
-                @test htm"<div key=$((1, 2, 3))></div>" |> r == "<div key=\"123\"></div>"
-                @test htm"<div key=$(\"fruit\" => \"pineapple\")></div>" |> r == "<div key=\"&#34;fruit&#34; =&#62; &#34;pineapple&#34;\"></div>"
-                @test htm"<div key=$(Dict(\"fruit\" => \"pineapple\"))></div>" |> r == "<div key=\"Dict(&#34;fruit&#34; =&#62; &#34;pineapple&#34;)\"></div>"
-            end
-        end
-
-        @testset "As tags" begin
-            @testset "Matching end-tag" begin
-                @testset "Complete tags" begin
-                    @test htm"<$(nothing)></$(nothing)>" |> r == "<nothing></nothing>"
-                    @test htm"<$(missing)></$(missing)>" |> r == "<missing></missing>"
-                    @test htm"<$(1)></$(1)>" |> r == "<1></1>"
-                    @test htm"<$(1.0)></$(1.0)>" |> r == "<1.0></1.0>"
-                    @test htm"<$(true)></$(true)>" |> r == "<true></true>"
-                    @test htm"<$(:symbol)></$(:symbol)>" |> r == "<symbol></symbol>"
-                    @test htm"<$(\"string\")></$(\"string\")>" |> r == "<string></string>"
-                    @test htm"<$([1, 2, 3])></$([1, 2, 3])>" |> r == "<123></123>"
-                    @test htm"<$((1, 2, 3))></$((1, 2, 3))>" |> r == "<123></123>"
-                    @test htm"<$(\"fruit\" => \"pineapple\")></$(\"fruit\" => \"pineapple\")>" |> r == "<&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
-                    @test htm"<$(Dict(\"fruit\" => \"pineapple\"))></$(Dict(\"fruit\" => \"pineapple\"))>" |> r == "<Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
-                end
-
-                @testset "Partial tags" begin
-                    @test htm"<h$(nothing)></h$(nothing)>" |> r == "<hnothing></hnothing>"
-                    @test htm"<h$(missing)></h$(missing)>" |> r == "<hmissing></hmissing>"
-                    @test htm"<h$(1)></h$(1)>" |> r == "<h1></h1>"
-                    @test htm"<h$(1.0)></h$(1.0)>" |> r == "<h1.0></h1.0>"
-                    @test htm"<h$(true)></h$(true)>" |> r == "<htrue></htrue>"
-                    @test htm"<h$(:symbol)></h$(:symbol)>" |> r == "<hsymbol></hsymbol>"
-                    @test htm"<h$(\"string\")></h$(\"string\")>" |> r == "<hstring></hstring>"
-                    @test htm"<h$([1, 2, 3])></h$([1, 2, 3])>" |> r == "<h123></h123>"
-                    @test htm"<h$((1, 2, 3))></h$((1, 2, 3))>" |> r == "<h123></h123>"
-                    @test htm"<h$(\"fruit\" => \"pineapple\")></h$(\"fruit\" => \"pineapple\")>" |> r == "<h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
-                    @test htm"<h$(Dict(\"fruit\" => \"pineapple\"))></h$(Dict(\"fruit\" => \"pineapple\"))>" |> r == "<hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                @testset "Exotic objects" begin
+                    @test htm"<div>$(HTML(\"<div></div>\"))</div>" |> r == "<div><div></div></div>"
+                    @test htm"<div>$(md\"# 🍍\")</div>" |> r == "<div><div class=\"markdown\"><h1>🍍</h1>\n</div></div>"
                 end
             end
 
-            @testset "Universal end-tag" begin
-                @testset "Complete tags" begin
-                    @test htm"<$(nothing)><//>" |> r == "<nothing></nothing>"
-                    @test htm"<$(missing)><//>" |> r == "<missing></missing>"
-                    @test htm"<$(1)><//>" |> r == "<1></1>"
-                    @test htm"<$(1.0)><//>" |> r == "<1.0></1.0>"
-                    @test htm"<$(true)><//>" |> r == "<true></true>"
-                    @test htm"<$(:symbol)><//>" |> r == "<symbol></symbol>"
-                    @test htm"<$(\"string\")><//>" |> r == "<string></string>"
-                    @test htm"<$([1, 2, 3])><//>" |> r == "<123></123>"
-                    @test htm"<$((1, 2, 3))><//>" |> r == "<123></123>"
-                    @test htm"<$(\"fruit\" => \"pineapple\")><//>" |> r == "<&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
-                    @test htm"<$(Dict(\"fruit\" => \"pineapple\"))><//>" |> r == "<Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+            @testset "As attributes" begin
+                @testset "As keys" begin
+                    # TODO: use for loops for checking MethodError with different types
+                    @test_throws MethodError htm"<div $(nothing)=fruit></div>" |> r == "<div nothing=\"fruit\"></div>"
+                    @test_throws MethodError htm"<div $(missing)=fruit></div>" |> r == "<div missing=\"fruit\"></div>"
+                    @test_throws MethodError htm"<div $(1)=fruit></div>" |> r == "<div 1=\"fruit\"></div>"
+                    @test_throws MethodError htm"<div $(1.0)=fruit></div>" |> r == "<div 1.0=\"fruit\"></div>"
+                    @test_throws MethodError htm"<div $(true)=fruit></div>" |> r == "<div true></div>"
+                    @test_throws MethodError htm"<div $(:symbol)=fruit></div>" |> r == "<div symbol=\"fruit\"></div>"
+                    @test_throws MethodError htm"<div $(\"string\")=fruit></div>" |> r == "<div string=\"fruit\"></div>"
+                    @test_throws MethodError htm"<div $([1, 2, 3])=fruit></div>" |> r == "<div 123=\"fruit\"></div>"
+                    @test_throws MethodError htm"<div $((1, 2, 3))=fruit></div>" |> r == "<div 123=\"fruit\"></div>"
+                    @test_throws MethodError htm"<div $(\"fruit\" => \"pineapple\")=fruit></div>" |> r == "<div &#34;fruit&#34; =&#62; &#34;pineapple&#34;=\"fruit\"></div>"
+                    @test htm"<div $(Dict(\"fruit\" => \"pineapple\"))=fruit></div>" |> r == "<div fruit=\"pineapple\" =\"fruit\"></div>"
                 end
 
-                @testset "Partial tags" begin
-                    @test htm"<h$(nothing)><//>" |> r == "<hnothing></hnothing>"
-                    @test htm"<h$(missing)><//>" |> r == "<hmissing></hmissing>"
-                    @test htm"<h$(1)><//>" |> r == "<h1></h1>"
-                    @test htm"<h$(1.0)><//>" |> r == "<h1.0></h1.0>"
-                    @test htm"<h$(true)><//>" |> r == "<htrue></htrue>"
-                    @test htm"<h$(:symbol)><//>" |> r == "<hsymbol></hsymbol>"
-                    @test htm"<h$(\"string\")><//>" |> r == "<hstring></hstring>"
-                    @test htm"<h$([1, 2, 3])><//>" |> r == "<h123></h123>"
-                    @test htm"<h$((1, 2, 3))><//>" |> r == "<h123></h123>"
-                    @test htm"<h$(\"fruit\" => \"pineapple\")><//>" |> r == "<h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
-                    @test htm"<h$(Dict(\"fruit\" => \"pineapple\"))><//>" |> r == "<hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                @testset "As values" begin
+                    @test htm"<div key=$(nothing)></div>" |> r == "<div></div>"
+                    @test_throws TypeError htm"<div key=$(missing)></div>" |> r == "<div key=\"missing\"></div>"
+                    @test htm"<div key=$(1)></div>" |> r == "<div key=\"1\"></div>"
+                    @test htm"<div key=$(1.0)></div>" |> r == "<div key=\"1.0\"></div>"
+                    @test htm"<div key=$(true)></div>" |> r == "<div key></div>"
+                    @test htm"<div key=$(:symbol)></div>" |> r == "<div key=\"symbol\"></div>"
+                    @test htm"<div key=$(\"string\")></div>" |> r == "<div key=\"string\"></div>"
+                    @test htm"<div key=$(\"fruit\" => \"pineapple\")></div>" |> r == "<div key=\"&#34;fruit&#34; =&#62; &#34;pineapple&#34;\"></div>"
+                    @test htm"<div key=$(Dict(\"fruit\" => \"pineapple\"))></div>" |> r == "<div key=\"Dict(&#34;fruit&#34; =&#62; &#34;pineapple&#34;)\"></div>"
+                end
+            end
+
+            @testset "As tags" begin
+                @testset "Matching end-tag" begin
+                    @testset "Complete tags" begin
+                        @test htm"<$(nothing)></$(nothing)>" |> r == "<nothing></nothing>"
+                        @test htm"<$(missing)></$(missing)>" |> r == "<missing></missing>"
+                        @test htm"<$(1)></$(1)>" |> r == "<1></1>"
+                        @test htm"<$(1.0)></$(1.0)>" |> r == "<1.0></1.0>"
+                        @test htm"<$(true)></$(true)>" |> r == "<true></true>"
+                        @test htm"<$(:symbol)></$(:symbol)>" |> r == "<symbol></symbol>"
+                        @test htm"<$(\"string\")></$(\"string\")>" |> r == "<string></string>"
+                        @test htm"<$([1, 2, 3])></$([1, 2, 3])>" |> r == "<123></123>"
+                        @test htm"<$(\"fruit\" => \"pineapple\")></$(\"fruit\" => \"pineapple\")>" |> r == "<&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
+                        @test htm"<$(Dict(\"fruit\" => \"pineapple\"))></$(Dict(\"fruit\" => \"pineapple\"))>" |> r == "<Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                    end
+
+                    @testset "Partial tags" begin
+                        @test htm"<h$(nothing)></h$(nothing)>" |> r == "<hnothing></hnothing>"
+                        @test htm"<h$(missing)></h$(missing)>" |> r == "<hmissing></hmissing>"
+                        @test htm"<h$(1)></h$(1)>" |> r == "<h1></h1>"
+                        @test htm"<h$(1.0)></h$(1.0)>" |> r == "<h1.0></h1.0>"
+                        @test htm"<h$(true)></h$(true)>" |> r == "<htrue></htrue>"
+                        @test htm"<h$(:symbol)></h$(:symbol)>" |> r == "<hsymbol></hsymbol>"
+                        @test htm"<h$(\"string\")></h$(\"string\")>" |> r == "<hstring></hstring>"
+                        @test htm"<h$([1, 2, 3])></h$([1, 2, 3])>" |> r == "<h123></h123>"
+                        @test htm"<h$(\"fruit\" => \"pineapple\")></h$(\"fruit\" => \"pineapple\")>" |> r == "<h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
+                        @test htm"<h$(Dict(\"fruit\" => \"pineapple\"))></h$(Dict(\"fruit\" => \"pineapple\"))>" |> r == "<hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                    end
+                end
+
+                @testset "Universal end-tag" begin
+                    @testset "Complete tags" begin
+                        @test htm"<$(nothing)><//>" |> r == "<nothing></nothing>"
+                        @test htm"<$(missing)><//>" |> r == "<missing></missing>"
+                        @test htm"<$(1)><//>" |> r == "<1></1>"
+                        @test htm"<$(1.0)><//>" |> r == "<1.0></1.0>"
+                        @test htm"<$(true)><//>" |> r == "<true></true>"
+                        @test htm"<$(:symbol)><//>" |> r == "<symbol></symbol>"
+                        @test htm"<$(\"string\")><//>" |> r == "<string></string>"
+                        @test htm"<$([1, 2, 3])><//>" |> r == "<123></123>"
+                        @test htm"<$(\"fruit\" => \"pineapple\")><//>" |> r == "<&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
+                        @test htm"<$(Dict(\"fruit\" => \"pineapple\"))><//>" |> r == "<Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                    end
+
+                    @testset "Partial tags" begin
+                        @test htm"<h$(nothing)><//>" |> r == "<hnothing></hnothing>"
+                        @test htm"<h$(missing)><//>" |> r == "<hmissing></hmissing>"
+                        @test htm"<h$(1)><//>" |> r == "<h1></h1>"
+                        @test htm"<h$(1.0)><//>" |> r == "<h1.0></h1.0>"
+                        @test htm"<h$(true)><//>" |> r == "<htrue></htrue>"
+                        @test htm"<h$(:symbol)><//>" |> r == "<hsymbol></hsymbol>"
+                        @test htm"<h$(\"string\")><//>" |> r == "<hstring></hstring>"
+                        @test htm"<h$([1, 2, 3])><//>" |> r == "<h123></h123>"
+                        @test htm"<h$(\"fruit\" => \"pineapple\")><//>" |> r == "<h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
+                        @test htm"<h$(Dict(\"fruit\" => \"pineapple\"))><//>" |> r == "<hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                    end
                 end
             end
         end
@@ -238,14 +284,14 @@ const r = Hyperscript.render
     @testset "Internal representation" begin
         @test HTM.parsenode(IOBuffer("<div />")) == HTM.Node(["div"], Dict())
         @test HTM.parsenode(IOBuffer("<div>Hi!</div>")) == HTM.Node(["div"], Dict(), String[], ["Hi!"])
-        @test HTM.parsenode(IOBuffer("<div class=fruit />")) == HTM.Node(["div"], Dict("class" => "fruit"))
-        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi!</div>")) == HTM.Node(["div"], Dict("class" => "fruit"), String[], ["Hi!"])
-        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi there!</div>")) == HTM.Node(["div"], Dict("class" => "fruit"), String[], ["Hi there!"])
+        @test HTM.parsenode(IOBuffer("<div class=fruit />")) == HTM.Node(["div"], Dict("class" => ["fruit"]))
+        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi!</div>")) == HTM.Node(["div"], Dict("class" => ["fruit"]), String[], ["Hi!"])
+        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi there!</div>")) == HTM.Node(["div"], Dict("class" => ["fruit"]), String[], ["Hi there!"])
 
-        @test HTM.parsenode(IOBuffer("<button class=fruit disabled />")) == HTM.Node(["button"], Dict("class" => "fruit", "disabled" => true))
-        @test HTM.parsenode(IOBuffer("<button class=fruit disabled>Click me</button>")) == HTM.Node(["button"], Dict("class" => "fruit", "disabled" => true), String[], ["Click me"])
+        @test HTM.parsenode(IOBuffer("<button class=fruit disabled />")) == HTM.Node(["button"], Dict("class" => ["fruit"], "disabled" => [raw"$(true)"]))
+        @test HTM.parsenode(IOBuffer("<button class=fruit disabled>Click me</button>")) == HTM.Node(["button"], Dict("class" => ["fruit"], "disabled" => [raw"$(true)"]), String[], ["Click me"])
 
-        @test HTM.parsenode(IOBuffer("<circle fill=orange />")) == HTM.Node(["circle"], Dict("fill" => "orange"))
+        @test HTM.parsenode(IOBuffer("<circle fill=orange />")) == HTM.Node(["circle"], Dict("fill" => ["orange"]))
 
         @testset "Stress tests" begin
             quotes = ("", '"', '\'')
