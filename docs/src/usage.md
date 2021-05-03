@@ -74,7 +74,6 @@ using HTM  # hide
 using Plots
 
 default(size=(250, 250))  # hide
-# Graph simplified from <https://www.desmos.com/calculator/eds5nef5cj>.
 p = begin
     plot!(θ -> 30.4 / (2 + sin(θ)) - 9.5, 0, 2π, color=:brown, proj=:polar, legend=nothing)
     for (a, b) in zip([-4  , 3  ,  9.6, 16.2, 22.7, 29.2, 35.7],
@@ -87,6 +86,7 @@ end
 pineapple = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/%E0%B4%95%E0%B5%88%E0%B4%A4%E0%B4%9A%E0%B5%8D%E0%B4%9A%E0%B4%95%E0%B5%8D%E0%B4%95.jpg/800px-%E0%B4%95%E0%B5%88%E0%B4%A4%E0%B4%9A%E0%B5%8D%E0%B4%9A%E0%B4%95%E0%B5%8D%E0%B4%95.jpg"  # hide
 🍍() = htm"<img src=$(pineapple) />"  # hide
 htm"""<div style="display: flex">
+    <!-- Graph simplified from <https://www.desmos.com/calculator/eds5nef5cj>. -->
     <div style="transform: rotate(5deg)">$(p)</div>
     <div style="max-width: 50%">$(🍍())</div>
 </div>"""
@@ -169,7 +169,6 @@ That is useful for mapping data to content via
 using HTM  # hide
 using Colors
 
-# Example taken from <https://observablehq.com/@observablehq/htl>.
 rows = map(enumerate(colormap("Oranges", 5))) do (i, color)
     htm"""<tr>
         <td>$(i)</td>
@@ -183,6 +182,7 @@ header = htm"""<tr>
 </tr>"""
 
 htm"""<table>
+    <!-- Example inspired from <https://observablehq.com/@observablehq/htl>. -->
     <caption>Five shades of 🍍</caption>
     <thead>$(header)</thead>
     <tbody>$(rows)</tbody>

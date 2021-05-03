@@ -54,6 +54,7 @@ and [Hypertext Literal](https://github.com/observablehq/htl):
 - HTML optional quotes: `htm"<div class=fruit></div>"`
 - Styles: `htm"<div style=$(style)></div>"`
 - Universal end-tags: `htm"<div>🍍<//>"`
+- HTML-style comments: `htm"<div><!-- 🍌 --></div>"`
 
 Furthermore, the components can be constructed using
 [Julia's display system](https://docs.julialang.org/en/v1/base/io-network/#Multimedia-I/O):

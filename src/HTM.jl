@@ -143,7 +143,7 @@ julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."
 @inline parseelems(predicate, io::IO) = parseelems!(predicate, io, Union{String, HTM.Node}[])
 @inline function parseelems!(predicate, io::IO, elems::AbstractVector)
     while !eof(io) && predicate(io)
-        pushelem!(elems, parseelem(io))
+        skipcomment(io) || pushelem!(elems, parseelem(io))
     end
     return elems
 end
@@ -164,6 +164,31 @@ julia> HTM.parseelem(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>...")
     startswith(io, '<') && return parsenode(io)
     skipstartswith(io, "\\\$") && return "\$"  # frustrated interp
     return parseinterp(∈("<\$\\"), io)
+end
+
+@doc raw"""
+    skipcomment(io::IO)
+
+Skip a comment if any.
+
+```jldoctest
+julia> io = IOBuffer("<!-- 🍌 -->🍍");
+
+julia> HTM.skipcomment(io)
+true
+
+julia> read(io, Char)
+'🍍'
+```
+"""
+@inline function skipcomment(io::IO)
+    if skipstartswith(io, "<!--")
+        while !(eof(io) || skipstartswith(io, "-->"))
+            skip(io, 1)
+        end
+        return true
+    end
+    return false
 end
 
 @doc raw"""

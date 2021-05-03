@@ -61,8 +61,11 @@ const r = Hyperscript.render
             @test htm"<div>🍍<//>" |> r == "<div>🍍</div>"
         end
 
-        @testset "Support for HTML-style comments" begin
-            @test_skip htm"<div><!-- comment --></div>" |> r == "<div><!-- comment --></div>"
+        @testset "HTML-style comments" begin
+            @test htm"<!-- 🍌 -->" === nothing
+            @test htm"<!-- 🍌 --><div></div>" |> r == "<div></div>"
+            @test htm"<div></div><!-- 🍌 -->" |> r == "<div></div>"
+            @test htm"<div><!-- 🍌 --></div>" |> r == "<div></div>"
         end
 
         @testset "Styles" begin
