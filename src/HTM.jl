@@ -2,8 +2,6 @@ module HTM
 
 using Hyperscript
 
-export create_element
-export processtag, processattrs, processchildren
 export @htm_str
 
 const UNIVERSALENDTAG = "<//>"
@@ -20,20 +18,39 @@ absctraction layer inspired by
 [`React.createElement`](https://pt-br.reactjs.org/docs/react-api.html#createelement).
 
 ```jldoctest
-julia> create_element("div", Dict("class" => "fruit"), "🍍")
+julia> HTM.create_element("div", Dict("class" => "fruit"), "🍍")
 <div class="fruit">🍍</div>
 ```
 """
 @inline create_element(tag, attrs, children...) = Hyperscript.Node(Hyperscript.DEFAULT_HTMLSVG_CONTEXT, tag, children, attrs)
 
+"""
+    render(x::MyType)
+
+Generic function that defines how a Julia object is rendered.
+
+This should normally return a `HTM.Node` object.
+
+This is an alternative to `show(io::IO, m::MIME"text/html", x)` inspired by
+WebIO and should only be redefined when Julia's display system is not
+powerful enough for your needs.
+
+```jldoctest
+julia> struct MyPlot
+           s::Scope
+       end
+
+julia> HTM.render(p::MyPlot) = HTM.render(p.s)
+```
+"""
+@inline render(🍎) = 🍎
+@inline render(x::Expr) = :($(render)($(x)))  # TODO: retire definitions for Expr and call them in toexpr?
+@inline render(b::Bool) = nothing
+
 @inline processtag(🍎) = 🍎
-@inline processtag(x::Expr) = :(processtag($(x)))
+@inline processtag(x::Expr) = :($(processtag)($(x)))
 @inline processtag(v::AbstractVector) = string(processtag.(v)...)
 @inline processtag(v::AbstractVector{T}) where {T<:AbstractString} = *(processtag.(v)...)
-
-@inline processchildren(🍎) = 🍎
-@inline processchildren(x::Expr) = :(processchildren($(x)))
-@inline processchildren(b::Bool) = nothing
 
 @inline processattrs(🍎) = 🍎
 # TODO: this merge is a pain. What I want:
@@ -44,15 +61,15 @@ julia> create_element("div", Dict("class" => "fruit"), "🍍")
 # always take precedence, no matter where they are given.
 # - same philosophy as with tags and children: store objects as they are,
 # handle later.
-@inline processattrs(x::Expr, p::Expr) = (x = :(merge!($(x), $(p)...)); :(processattrs($(x))))  # promises update.
+@inline processattrs(x::Expr, p::Expr) = (x = :(merge!($(x), $(p)...)); :($(processattrs)($(x))))  # promises update.
 @inline processattrs(b::Bool) = b ? nothing : error("should have been disabled")
 @inline processattrs(v::AbstractVector{T}) where {T<:AbstractString} = *(processattrs.(v)...)
 @inline processattrs(p::Pair) = (k = first(p); string(k) => processattrs(last(p), Val(Symbol(k))))  # no interps in keys: use spread attributes
 @inline processattrs(d::AbstractDict) = Dict(processattrs.(filter(isenabled∘last, collect(d))))
 
 @inline processattrs(🍎, ::Val) = processattrs(🍎)
-@inline processattrs(d::AbstractDict, ::Val{:style}) = *((string(first(p), ':', last(p), ';') for p in processattrs(d))...)  # TODO: should we process first/last and not dict?
-@inline processattrs(v::AbstractVector, ::Val{:class}) = *((string(processattrs(c), ' ') for c in Set(v))...)  # TODO: remove space at the end?
+@inline processattrs(d::AbstractDict, ::Val{:style}) = *((string(first(p), ':', last(p), ';') for p in processattrs(d))...)  # TODO: should we process first/last and not dict? TODO: add space between key/value
+@inline processattrs(v::AbstractVector, ::Val{:class}) = *((string(processattrs(c), ' ') for c in Set(v))...)  # TODO: remove space at the end
 
 # Hide attributes if `false` or `nothing`, Hyperscript.jl uses `nothing` to
 # mean something else (empty attribute).
@@ -94,8 +111,8 @@ end
     # TODO: can tag be empty? See <https://pt-br.reactjs.org/docs/fragments.html#short-syntax> for a usage.
     tag = isempty(🍍.tag) ? "" : processtag(toexprvec(🍍.tag))
     attrs = (isempty(🍍.attrs) && isempty(🍍.promises)) ? Dict{String,Any}() : processattrs(toexpr(🍍.attrs), toexprvec(🍍.promises))
-    children = isempty(🍍.children) ? Any[] : processchildren(toexpr(🍍.children))
-    return :(create_element($(tag), $(attrs), $(children)))
+    children = isempty(🍍.children) ? Any[] : render(toexpr(🍍.children))
+    return :($(create_element)($(tag), $(attrs), $(children)))
 end
 @inline toexpr(s::AbstractString) = (length(s) > 1 && startswith(s, '$')) ? Meta.parse(s[nextind(s, begin):end]) : s
 @inline toexpr(v::AbstractVector) = length(v) == 1 ? :($(toexpr(first(v)))) : toexprvec(v)

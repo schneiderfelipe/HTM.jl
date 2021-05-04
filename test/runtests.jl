@@ -275,17 +275,17 @@ const r = Hyperscript.render
         end
     end
 
-    @testset "create_element" begin
-        @test create_element("div", (), ()) |> r == "<div></div>"
-        @test create_element("div", (), "Hi!") |> r == "<div>Hi&#33;</div>"
-        @test create_element("div", Dict("class" => "fruit")) |> r == "<div class=\"fruit\"></div>"
-        @test create_element("div", Dict("class" => "fruit"), "Hi!") |> r == "<div class=\"fruit\">Hi&#33;</div>"
-        @test create_element("div", Dict("class" => "fruit"), "Hi ", "there!") |> r == "<div class=\"fruit\">Hi there&#33;</div>"
+    @testset "Create elements" begin
+        @test HTM.create_element("div", (), ()) |> r == "<div></div>"
+        @test HTM.create_element("div", (), "Hi!") |> r == "<div>Hi&#33;</div>"
+        @test HTM.create_element("div", Dict("class" => "fruit")) |> r == "<div class=\"fruit\"></div>"
+        @test HTM.create_element("div", Dict("class" => "fruit"), "Hi!") |> r == "<div class=\"fruit\">Hi&#33;</div>"
+        @test HTM.create_element("div", Dict("class" => "fruit"), "Hi ", "there!") |> r == "<div class=\"fruit\">Hi there&#33;</div>"
 
-        @test create_element("button", Dict("class" => "fruit", "disabled" => nothing)) |> r == "<button class=\"fruit\" disabled></button>"
-        @test create_element("button", Dict("class" => "fruit", "disabled" => nothing), "Click me") |> r == "<button class=\"fruit\" disabled>Click me</button>"
+        @test HTM.create_element("button", Dict("class" => "fruit", "disabled" => nothing)) |> r == "<button class=\"fruit\" disabled></button>"
+        @test HTM.create_element("button", Dict("class" => "fruit", "disabled" => nothing), "Click me") |> r == "<button class=\"fruit\" disabled>Click me</button>"
 
-        @test create_element("circle", Dict("fill" => "orange")) |> r == "<circle fill=\"orange\" />"
+        @test HTM.create_element("circle", Dict("fill" => "orange")) |> r == "<circle fill=\"orange\" />"
     end
 
     @testset "Internal representation" begin
