@@ -71,6 +71,7 @@ const r = Hyperscript.render
         @testset "Styles" begin
             style = Dict("background" => "orange")
             @test htm"<span style=$(style)>pineapple</span>" |> r == "<span style=\"background:orange;\">pineapple</span>"
+            @test htm"<span style='background:$(style[\"background\"]);'>pineapple</span>" |> r == "<span style=\"background:orange;\">pineapple</span>"
         end
 
         @testset "Classes" begin
@@ -259,11 +260,11 @@ const r = Hyperscript.render
             @test htm"<div \$(notvar)=fruit />" |> r == raw"""<div &#36;&#40;notvar&#41;="fruit"></div>"""
             @test_broken htm"<div class=\$(notvar) />" |> r == raw"""<div class="$(notvar)"></div>"""
 
-            @test htm"<div \$notvar=\"fruit\" />" |> r == raw"""<div &#36;notvar="fruit"></div>"""
-            @test_broken htm"<div class=\"\$notvar\" />" |> r == raw"""<div class="$notvar"></div>"""
+            @test htm"<div \$notvar='fruit' />" |> r == raw"""<div &#36;notvar="fruit"></div>"""
+            @test_broken htm"<div class='\$notvar' />" |> r == raw"""<div class="$notvar"></div>"""
 
-            @test htm"<div \$(notvar)=\"fruit\" />" |> r == raw"""<div &#36;&#40;notvar&#41;="fruit"></div>"""
-            @test_broken htm"<div class=\"\$(notvar)\" />" |> r == raw"""<div class="$(notvar)"></div>"""
+            @test htm"<div \$(notvar)='fruit' />" |> r == raw"""<div &#36;&#40;notvar&#41;="fruit"></div>"""
+            @test_broken htm"<div class='\$(notvar)' />" |> r == raw"""<div class="$(notvar)"></div>"""
         end
 
         @testset "HTML entity escape trick" begin

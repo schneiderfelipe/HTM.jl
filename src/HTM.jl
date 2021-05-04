@@ -178,7 +178,7 @@ julia> HTM.skipcomment(io)
 true
 
 julia> read(io, Char)
-'🍍'
+'🍍': Unicode U+1F34D (category So: Symbol, other)
 ```
 """
 @inline function skipcomment(io::IO)

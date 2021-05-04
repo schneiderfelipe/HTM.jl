@@ -109,9 +109,14 @@ and [`@md_str`](https://docs.julialang.org/en/v1/stdlib/Markdown/)
 from the [standard library](https://docs.julialang.org/en/v1/):
 
 ```jldoctest
-julia> htm"<div>$(md\"# 🍍\")</div>"
-<div><p class="markdown"><h1> 🍍</h1></p></div>
+julia> using Markdown
 
+julia> htm"<div>$(md\"# 🍍\")</div>"
+<div><div class="markdown"><h1>🍍</h1>
+</div></div>
+```
+
+```jldoctest
 julia> htm"<p>🍍$(html\"&nbsp;\")🍌</p>"
 <p>🍍&nbsp;🍌</p>
 ```
