@@ -50,7 +50,8 @@ true
 ```
 
 Multiple top-level elements
-(["document fragments"](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment))
+(["document fragments"](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment),
+[`React.Fragment`](https://pt-br.reactjs.org/docs/react-api.html#reactfragment))
 are represented as arrays:
 
 ```jldoctest

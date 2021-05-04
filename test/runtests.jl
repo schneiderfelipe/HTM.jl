@@ -82,6 +82,8 @@ const r = Hyperscript.render
         @testset "Callbacks" begin
             @test_broken htm"<button onclick=$(() -> pineapples += 1)>🍍</button>" |> r == "<button onclick=\"pineapples += 1\">🍍</button>"
         end
+
+        # TODO: can tag be empty? See <https://pt-br.reactjs.org/docs/fragments.html#short-syntax> for a usage.
     end
 
     @testset "Return types" begin
@@ -165,7 +167,7 @@ const r = Hyperscript.render
 
             @testset "As attributes" begin
                 @testset "As keys" begin
-                    @test htm"<div $(Dict(\"fruit\" => \"pineapple\"))=fruit></div>" |> r == "<div fruit=\"pineapple\" =\"fruit\"></div>"
+                    @test_throws MethodError htm"<div $(Dict(\"fruit\" => \"pineapple\"))=fruit></div>" |> r == "<div fruit=\"pineapple\" =\"fruit\"></div>"
                 end
 
                 @testset "As values" begin
@@ -276,29 +278,31 @@ const r = Hyperscript.render
     end
 
     @testset "Create elements" begin
-        @test HTM.create_element("div", (), ()) |> r == "<div></div>"
-        @test HTM.create_element("div", (), "Hi!") |> r == "<div>Hi&#33;</div>"
-        @test HTM.create_element("div", Dict("class" => "fruit")) |> r == "<div class=\"fruit\"></div>"
-        @test HTM.create_element("div", Dict("class" => "fruit"), "Hi!") |> r == "<div class=\"fruit\">Hi&#33;</div>"
-        @test HTM.create_element("div", Dict("class" => "fruit"), "Hi ", "there!") |> r == "<div class=\"fruit\">Hi there&#33;</div>"
+        @test HTM.create_element("div", []) |> r == "<div></div>"
+        @test HTM.create_element("div", [], []) |> r == "<div></div>"
+        @test HTM.create_element("div", [], "Hi!") |> r == "<div>Hi&#33;</div>"
+        @test HTM.create_element("div", [], ["Hi!"]) |> r == "<div>Hi&#33;</div>"
+        @test HTM.create_element("div", ["class" => "fruit"]) |> r == "<div class=\"fruit\"></div>"
+        @test HTM.create_element("div", ["class" => "fruit"], "Hi!") |> r == "<div class=\"fruit\">Hi&#33;</div>"
+        @test HTM.create_element("div", ["class" => "fruit"], "Hi ", "there!") |> r == "<div class=\"fruit\">Hi there&#33;</div>"
 
-        @test HTM.create_element("button", Dict("class" => "fruit", "disabled" => nothing)) |> r == "<button class=\"fruit\" disabled></button>"
-        @test HTM.create_element("button", Dict("class" => "fruit", "disabled" => nothing), "Click me") |> r == "<button class=\"fruit\" disabled>Click me</button>"
+        @test HTM.create_element("button", ["class" => "fruit", "disabled" => nothing]) |> r == "<button class=\"fruit\" disabled></button>"
+        @test HTM.create_element("button", ["class" => "fruit", "disabled" => nothing], "Click me") |> r == "<button class=\"fruit\" disabled>Click me</button>"
 
-        @test HTM.create_element("circle", Dict("fill" => "orange")) |> r == "<circle fill=\"orange\" />"
+        @test HTM.create_element("circle", ["fill" => "orange"]) |> r == "<circle fill=\"orange\" />"
     end
 
     @testset "Internal representation" begin
-        @test HTM.parsenode(IOBuffer("<div />")) == HTM.Node(["div"], Dict())
-        @test HTM.parsenode(IOBuffer("<div>Hi!</div>")) == HTM.Node(["div"], Dict(), String[], ["Hi!"])
-        @test HTM.parsenode(IOBuffer("<div class=fruit />")) == HTM.Node(["div"], Dict("class" => ["fruit"]))
-        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi!</div>")) == HTM.Node(["div"], Dict("class" => ["fruit"]), String[], ["Hi!"])
-        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi there!</div>")) == HTM.Node(["div"], Dict("class" => ["fruit"]), String[], ["Hi there!"])
+        @test HTM.parsenode(IOBuffer("<div />")) == HTM.Node(["div"])
+        @test HTM.parsenode(IOBuffer("<div>Hi!</div>")) == HTM.Node(["div"], [], ["Hi!"])
+        @test HTM.parsenode(IOBuffer("<div class=fruit />")) == HTM.Node(["div"], ["class" => ["fruit"]])
+        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi!</div>")) == HTM.Node(["div"], ["class" => ["fruit"]], ["Hi!"])
+        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi there!</div>")) == HTM.Node(["div"], ["class" => ["fruit"]], ["Hi there!"])
 
-        @test HTM.parsenode(IOBuffer("<button class=fruit disabled />")) == HTM.Node(["button"], Dict("class" => ["fruit"], "disabled" => [raw"$(true)"]))
-        @test HTM.parsenode(IOBuffer("<button class=fruit disabled>Click me</button>")) == HTM.Node(["button"], Dict("class" => ["fruit"], "disabled" => [raw"$(true)"]), String[], ["Click me"])
+        @test HTM.parsenode(IOBuffer("<button class=fruit disabled />")) == HTM.Node(["button"], ["class" => ["fruit"], "disabled" => [raw"$(true)"]])
+        @test HTM.parsenode(IOBuffer("<button class=fruit disabled>Click me</button>")) == HTM.Node(["button"], ["class" => ["fruit"], "disabled" => [raw"$(true)"]], ["Click me"])
 
-        @test HTM.parsenode(IOBuffer("<circle fill=orange />")) == HTM.Node(["circle"], Dict("fill" => ["orange"]))
+        @test HTM.parsenode(IOBuffer("<circle fill=orange />")) == HTM.Node(["circle"], ["fill" => ["orange"]])
 
         @testset "Stress tests" begin
             quotes = ("", '"', '\'')
