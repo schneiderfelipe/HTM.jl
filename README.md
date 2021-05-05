@@ -76,7 +76,7 @@ you like pineapples).
 
 ## Project status
 
-HTM.jl is a small (~300 lines of code) open-source Julia project.
+HTM.jl is a small (<400 lines of code) open-source Julia project.
 It was once called JSX.jl.
 Its main goal is to create a fully-featured, backend-agnostic (any library
 that produces HTML elements can be used as a backend) alternative to the

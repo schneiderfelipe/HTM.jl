@@ -18,7 +18,7 @@ abstraction layer inspired by
 [`React.createElement`](https://pt-br.reactjs.org/docs/react-api.html#createelement).
 
 ```jldoctest
-julia> HTM.create_element("div", ["class" => "fruit"], "🍍")
+julia> HTM.create_element("div", [:class => "fruit"], "🍍")
 <div class="fruit">🍍</div>
 ```
 """
@@ -30,15 +30,15 @@ julia> HTM.create_element("div", ["class" => "fruit"], "🍍")
 Compile time internal representation of a node.
 
 ```jldoctest
-julia> HTM.Node(["div"], ["class" => ["fruit"]], ["🍍"])
-HTM.Node(["div"], ["class" => ["fruit"]], Union{String, HTM.Node}["🍍"])
+julia> HTM.Node(["div"], [:class => ["fruit"]], ["🍍"])
+HTM.Node(["div"], [:class => ["fruit"]], Union{String, HTM.Node}["🍍"])
 ```
 """
 struct Node
     tag::Vector{String}
-    attrs::Vector{Pair{String,Vector{String}}}
+    attrs::Vector{Pair{Symbol,Vector{String}}}
     children::Vector{Union{String,HTM.Node}}
-    Node(tag, attrs=Pair{String,Vector{String}}[], children=Union{String,HTM.Node}[]) = new(tag, attrs, children)
+    Node(tag, attrs=Pair{Symbol,Vector{String}}[], children=Union{String,HTM.Node}[]) = new(tag, attrs, children)
 end
 Base.:(==)(🍍::Node, 🍌::Node) = 🍍.tag == 🍌.tag && 🍍.attrs == 🍌.attrs && 🍍.children == 🍌.children
 
@@ -86,27 +86,30 @@ julia> htm"<p>$(Fruit(\\"pineapple\\", '🍍'))</p>"
 # TODO: REVIEW create_attrs & friends
 # TODO: simplify and benchmark things related to create_attrs
 @inline create_attrs(d::AbstractDict) = create_attrs(collect(d))
-@inline create_attrs(v::AbstractVector) = (attrs = Pair{String,Any}[]; foreach(p -> isenabled(last(p)) && pushattr!(attrs, create_attr(p)), v); attrs)  # TODO: better type for attrs?
+@inline create_attrs(v::AbstractVector) = (attrs = Pair{Symbol,Any}[]; foreach(p -> isenabled(last(p)) && pushattr!(attrs, create_attr(p)), v); attrs)  # TODO: choose type as we build the array?
 @inline pushattr!(v::AbstractVector, p::Pair) = push!(v, p)  # TODO: benchmark isenabled here and filter below instead of in create_attrs
 @inline pushattr!(v::AbstractVector, p::AbstractVector) = append!(v, p)
 
 @inline create_attr(p::Pair) = create_attr(first(p), last(p))
-@inline create_attr(🔑, v) = create_attr(Val(Symbol(🔑)), v)  # TODO: use symbols all the way for keys, as we don't interpolate them anyway
+@inline create_attr(🔑::Symbol, v) = create_attr(Val(🔑), v)
+@inline create_attr(🔑, v) = create_attr(Symbol(🔑), v)
 # --- #
 
 
 # TODO: is it worth using attrs = Pair{Symbol,Any}[]? Benchmark!
-@inline create_attr(::Val{C}, x) where {C} = string(C) => create_value(x)  # no interps in keys: use spread attributes
+@inline create_attr(::Val{K}, x) where {K} = K => create_value(x)  # no interps in keys: use spread attributes
 
 # spread attributes
 @inline create_attr(::Val{Symbol()}, d) = create_attrs(d)
 
 # style attribute
-@inline create_attr(::Val{:style}, d::Union{AbstractDict,AbstractVector{Pair{K,V}}}) where {K,V} = "style" => *((*(first(p), ':', last(p), ';') for p in d)...)  # TODO: add space between key/value, and remove last character?
+@inline create_attr(::Val{:style}, d::Union{AbstractDict,AbstractVector{Pair{K,V}}}) where {K,V} = :style => *((cssprop(p) for p in d)...)  # TODO: remove last character?
+@inline cssprop(p::Pair) = *(first(p), ':', last(p), ';')  # TODO: add space between key/value
+@inline cssprop(p::Pair{Symbol,V}) where {V} = cssprop(string(first(p)) => last(p))
 
 # class attribute
-@inline create_attr(::Val{:class}, s::AbstractString) = "class" => create_value(s)
-@inline create_attr(::Val{:class}, m::AbstractSet) = "class" => *((*(c, ' ') for c in m)...)  # TODO: adjust spaces around classes?
+@inline create_attr(::Val{:class}, s::AbstractString) = :class => create_value(s)
+@inline create_attr(::Val{:class}, m::AbstractSet) = :class => *((*(c, ' ') for c in m)...)  # TODO: adjust spaces around classes?
 @inline create_attr(🔑::Val{:class}, v) = create_attr(🔑, Set(v))
 
 
@@ -119,13 +122,13 @@ end
 
 @inline function toexpr(🍍::Node)
     tag = isempty(🍍.tag) ? "" : :($(create_tag)($(toexprvec(🍍.tag))))
-    attrs = isempty(🍍.attrs) ? Pair{String,Any}[] : :($(create_attrs)($(toexprvec(🍍.attrs))))
+    attrs = isempty(🍍.attrs) ? Pair{Symbol,Any}[] : :($(create_attrs)($(toexprvec(🍍.attrs))))
     children = isempty(🍍.children) ? Any[] : :($(render)($(toexpr(🍍.children))))
     return :($(create_element)($(tag), $(attrs), $(children)))
 end
 @inline toexpr(s::AbstractString) = (length(s) > 1 && startswith(s, '$')) ? Meta.parse(s[nextind(s, begin):end]) : s
 @inline toexpr(v::AbstractVector) = length(v) == 1 ? :($(toexpr(first(v)))) : toexprvec(v)
-@inline toexpr(p::Pair) = (v = last(p); :($(first(p)) => $(length(v) > 1 ? toexpr(v) : toexpr(first(v)))))  # no interps in keys
+@inline toexpr(p::Pair) = (v = last(p); :($(:(first($(p)))) => $(length(v) > 1 ? toexpr(v) : toexpr(first(v)))))  # no interps in keys
 
 @inline toexprvec(v::AbstractVector) = :([$(toexpr.(v)...)])  # TODO: should use reduce(vcat, v)?
 
@@ -151,7 +154,7 @@ Parse a literal string.
 julia> HTM.parse("pineapple: <div class=\\"fruit\\">🍍</div>...")
 3-element Vector{Union{String, HTM.Node}}:
  "pineapple: "
- HTM.Node(["div"], ["class" => ["fruit"]], Union{String, HTM.Node}["🍍"])
+ HTM.Node(["div"], [:class => ["fruit"]], Union{String, HTM.Node}["🍍"])
  "..."
 ```
 """
@@ -170,7 +173,7 @@ This function is the entry point for an implementation of a subset of the
 julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."))
 3-element Vector{Union{String, HTM.Node}}:
  "pineapple: "
- HTM.Node(["div"], ["class" => ["fruit"]], Union{String, HTM.Node}["🍍"])
+ HTM.Node(["div"], [:class => ["fruit"]], Union{String, HTM.Node}["🍍"])
  "..."
 ```
 """
@@ -233,7 +236,7 @@ Parse an [`HTM.Node`](@ref) object.
 
 ```jldoctest
 julia> HTM.parsenode(IOBuffer("<div class=\\"fruit\\">🍍</div>..."))
-HTM.Node(["div"], ["class" => ["fruit"]], Union{String, HTM.Node}["🍍"])
+HTM.Node(["div"], [:class => ["fruit"]], Union{String, HTM.Node}["🍍"])
 ```
 """
 @inline function parsenode(io::IO)
@@ -273,16 +276,16 @@ Parse attributes of a node.
 
 ```jldoctest
 julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\">🍍..."))
-1-element Vector{Pair{String, Vector{String}}}:
- "class" => ["fruit"]
+1-element Vector{Pair{Symbol, Vector{String}}}:
+ :class => ["fruit"]
 
 julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
-2-element Vector{Pair{String, Vector{String}}}:
- "class" => ["fruit"]
-      "" => ["\$(attrs)"]
+2-element Vector{Pair{Symbol, Vector{String}}}:
+   :class => ["fruit"]
+ Symbol() => ["\$(attrs)"]
 ```
 """
-@inline parseattrs(io::IO) = parseattrs!(io, Pair{String,Vector{String}}[])
+@inline parseattrs(io::IO) = parseattrs!(io, Pair{Symbol,Vector{String}}[])
 @inline function parseattrs!(io::IO, attrs::AbstractVector)
     while !eof(io)
         skipchars(isspace, io)
@@ -293,7 +296,7 @@ julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
 end
 @inline function parseattr!(io::IO, attrs::AbstractVector)
     eof(io) && return push!(attrs, 🔑 => [raw"$(true)"])  # TODO: do we need this? test! this seems like defective input, just throw an error! key is not even defined here!
-    startswith(io, '$') && return push!(attrs, "" => [parseinterp(io)])  # spread attributes
+    startswith(io, '$') && return push!(attrs, Symbol() => [parseinterp(io)])  # spread attributes
     startswith(io, "\\\$") && skip(io, 1)  # no interps in keys: just ignore escaping
     🔑 = parsekey(io)
     let 🍒 = read(io, Char)
@@ -310,10 +313,10 @@ Parse an attribute key.
 
 ```jldoctest
 julia> HTM.parsekey(IOBuffer("class=\\"fruit\\">🍍..."))
-"class"
+:class
 ```
 """
-@inline parsekey(io::IO) = readuntil(isspace ⩔ ∈("=>/"), io)
+@inline parsekey(io::IO) = Symbol(readuntil(isspace ⩔ ∈("=>/"), io))
 
 @doc raw"""
     parsevalue(io::IO)

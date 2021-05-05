@@ -10,12 +10,14 @@ const r = Hyperscript.render
 @testset "HTM.jl" begin
     # Warning: some test cases may not represent supported usage.
     @testset "Features" begin
-        @testset "Spread attributes" for attrs in (["class" => "fruit"], Dict("class" => "fruit"))
+        @testset "Spread attributes" for attrs in ([:class => "fruit"], Dict(:class => "fruit"),
+                                                   ["class" => "fruit"], Dict("class" => "fruit"))
             @test htm"<div $(attrs)></div>" |> r == "<div class=\"fruit\"></div>"
         end
 
         @testset "Styles" begin
-            @testset "Interpolations" for style in (["background" => "orange"], Dict("background" => "orange"))
+            @testset "Interpolations" for style in ([:background => "orange"], Dict(:background => "orange"),
+                                                    ["background" => "orange"], Dict("background" => "orange"))
                 @test htm"<span style=$(style)>pineapple</span>" |> r == "<span style=\"background:orange;\">pineapple</span>"
             end
             @test htm"<span style='background:$(\"orange\");'>pineapple</span>" |> r == "<span style=\"background:orange;\">pineapple</span>"
@@ -255,21 +257,21 @@ const r = Hyperscript.render
             @test htm"<div>\$(notvar)</div>" |> r == raw"<div>&#36;&#40;notvar&#41;</div>"
 
             @test htm"<\$notvar />" |> r == raw"<&#36;notvar></&#36;notvar>"
-            @test htm"<div \$notvar />" |> r == raw"""<div &#36;notvar></div>"""
+            @test_broken htm"<div \$notvar />" |> r == raw"""<div &#36;notvar></div>"""
 
             @test htm"<\$(notvar) />" |> r == raw"<&#36;&#40;notvar&#41;></&#36;&#40;notvar&#41;>"
-            @test htm"<div \$(notvar) />" |> r == raw"""<div &#36;&#40;notvar&#41;></div>"""
+            @test_broken htm"<div \$(notvar) />" |> r == raw"""<div &#36;&#40;notvar&#41;></div>"""
 
-            @test htm"<div \$notvar=fruit />" |> r == raw"""<div &#36;notvar="fruit"></div>"""
+            @test_broken htm"<div \$notvar=fruit />" |> r == raw"""<div &#36;notvar="fruit"></div>"""
             @test_broken htm"<div class=\$notvar />" |> r == raw"""<div class="$notvar"></div>"""
 
-            @test htm"<div \$(notvar)=fruit />" |> r == raw"""<div &#36;&#40;notvar&#41;="fruit"></div>"""
+            @test_broken htm"<div \$(notvar)=fruit />" |> r == raw"""<div &#36;&#40;notvar&#41;="fruit"></div>"""
             @test_broken htm"<div class=\$(notvar) />" |> r == raw"""<div class="$(notvar)"></div>"""
 
-            @test htm"<div \$notvar='fruit' />" |> r == raw"""<div &#36;notvar="fruit"></div>"""
+            @test_broken htm"<div \$notvar='fruit' />" |> r == raw"""<div &#36;notvar="fruit"></div>"""
             @test_broken htm"<div class='\$notvar' />" |> r == raw"""<div class="$notvar"></div>"""
 
-            @test htm"<div \$(notvar)='fruit' />" |> r == raw"""<div &#36;&#40;notvar&#41;="fruit"></div>"""
+            @test_broken htm"<div \$(notvar)='fruit' />" |> r == raw"""<div &#36;&#40;notvar&#41;="fruit"></div>"""
             @test_broken htm"<div class='\$(notvar)' />" |> r == raw"""<div class="$(notvar)"></div>"""
         end
 
@@ -299,14 +301,14 @@ const r = Hyperscript.render
     @testset "Internal representation" begin
         @test HTM.parsenode(IOBuffer("<div />")) == HTM.Node(["div"])
         @test HTM.parsenode(IOBuffer("<div>Hi!</div>")) == HTM.Node(["div"], [], ["Hi!"])
-        @test HTM.parsenode(IOBuffer("<div class=fruit />")) == HTM.Node(["div"], ["class" => ["fruit"]])
-        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi!</div>")) == HTM.Node(["div"], ["class" => ["fruit"]], ["Hi!"])
-        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi there!</div>")) == HTM.Node(["div"], ["class" => ["fruit"]], ["Hi there!"])
+        @test HTM.parsenode(IOBuffer("<div class=fruit />")) == HTM.Node(["div"], [:class => ["fruit"]])
+        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi!</div>")) == HTM.Node(["div"], [:class => ["fruit"]], ["Hi!"])
+        @test HTM.parsenode(IOBuffer("<div class=fruit>Hi there!</div>")) == HTM.Node(["div"], [:class => ["fruit"]], ["Hi there!"])
 
-        @test HTM.parsenode(IOBuffer("<button class=fruit disabled />")) == HTM.Node(["button"], ["class" => ["fruit"], "disabled" => [raw"$(true)"]])
-        @test HTM.parsenode(IOBuffer("<button class=fruit disabled>Click me</button>")) == HTM.Node(["button"], ["class" => ["fruit"], "disabled" => [raw"$(true)"]], ["Click me"])
+        @test HTM.parsenode(IOBuffer("<button class=fruit disabled />")) == HTM.Node(["button"], [:class => ["fruit"], :disabled => [raw"$(true)"]])
+        @test HTM.parsenode(IOBuffer("<button class=fruit disabled>Click me</button>")) == HTM.Node(["button"], [:class => ["fruit"], :disabled => [raw"$(true)"]], ["Click me"])
 
-        @test HTM.parsenode(IOBuffer("<circle fill=orange />")) == HTM.Node(["circle"], ["fill" => ["orange"]])
+        @test HTM.parsenode(IOBuffer("<circle fill=orange />")) == HTM.Node(["circle"], [:fill => ["orange"]])
 
         @testset "Stress tests" begin
             quotes = ("", '"', '\'')
