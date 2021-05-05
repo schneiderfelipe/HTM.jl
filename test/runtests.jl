@@ -92,6 +92,46 @@ const r = Hyperscript.render
         # TODO: can tag be empty? See <https://pt-br.reactjs.org/docs/fragments.html#short-syntax> for a usage.
     end
 
+    @testset "Common HTML elements" begin
+        # The Pareto slice (>80%) of <https://www.advancedwebranking.com/html/>
+        @test htm"<html/>" |> r == "<html></html>"
+        @test htm"<head/>" |> r == "<head></head>"
+        @test htm"<body/>" |> r == "<body></body>"
+        @test htm"<title/>" |> r == "<title></title>"
+        @test htm"<meta/>" |> r == "<meta />"
+        @test htm"<div/>" |> r == "<div></div>"
+        @test htm"<a/>" |> r == "<a></a>"
+        @test htm"<link/>" |> r == "<link />"
+        @test htm"<span/>" |> r == "<span></span>"
+        @test htm"<p/>" |> r == "<p></p>"
+        @test htm"<li/>" |> r == "<li></li>"
+        @test htm"<ul/>" |> r == "<ul></ul>"
+        @test htm"<style/>" |> r == "<style></style>"
+
+        # Surprisingly common specifics
+        @test_broken htm"""<script>
+            document.getElementById("demo").innerHTML = "Hello JavaScript!";
+        </script>""" |> r == """<script>
+            document.getElementById("demo").innerHTML = "Hello JavaScript!";
+        </script>"""
+        @test htm"<img src=img_girl.jpg alt='Girl in a jacket' width=500 height=600/>" |> r == """<img alt="Girl in a jacket" height="600" src="img_girl.jpg" width="500" />"""
+        @test htm"<img src=red-circle.svg height=32 width=32 alt='A red circle'/>" |> r == """<img height="32" alt="A red circle" src="red-circle.svg" width="32" />"""
+        @test htm"<p>My favorite color is <del>blue</del> <ins>red</ins>!</p>" |> r == "<p>My favorite color is <del>blue</del><ins>red</ins>&#33;</p>"
+
+        @test htm"<source src=horse.ogg type='audio/ogg'/>" |> r == """<source src="horse.ogg" type="audio/ogg" />"""
+        @test htm"<template>
+            <h2>Flower</h2>
+            <img src=img_white_flower.jpg width=214 height=204/>
+        </template>" |> r == """<template><h2>Flower</h2><img height="204" src="img_white_flower.jpg" width="214" /></template>"""
+    end
+
+    @testset "Common SVG elements" begin
+        # TODO: make this more complete
+        @test htm"""<svg width=100 height=100>
+            <circle cx=50 cy=50 r=40 stroke=green stroke-width=4 fill=yellow/>
+        </svg>""" |> r == """<svg height="100" width="100"><circle cy="50" stroke-width="4" stroke="green" r="40" fill="yellow" cx="50" /></svg>"""
+    end
+
     @testset "Return types" begin
         @test htm"<div>🍍</div>" isa Hyperscript.Node
         @test htm"🍍" isa String
