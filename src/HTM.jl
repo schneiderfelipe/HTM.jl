@@ -80,13 +80,10 @@ julia> htm"<p>$(Fruit(\\"pineapple\\", '🍍'))</p>"
 @inline isenabled(b::Bool) = b
 @inline isenabled(::Nothing) = false
 
-# TODO: benchmark things related to create_attrs
-# TODO: is it worth using attrs = Pair{Symbol,Any}[]? Benchmark!
-
 @inline create_attrs(d::AbstractDict) = create_attrs(collect(d))
-@inline create_attrs(v::AbstractVector) = (attrs = Pair{Symbol,Any}[]; foreach(p -> isenabled(last(p)) && pushattr!(attrs, create_attr(p)), v); attrs)  # TODO: choose type as we build the array?
+@inline create_attrs(v::AbstractVector) = (attrs = Pair{Symbol,Any}[]; foreach(p -> isenabled(last(p)) && pushattr!(attrs, create_attr(p)), v); attrs)
 @inline pushattr!(v::AbstractVector, p::AbstractVector) = append!(v, p)
-@inline pushattr!(v::AbstractVector, p::Pair) = push!(v, p)  # TODO: benchmark isenabled here and filter below instead of in create_attrs
+@inline pushattr!(v::AbstractVector, p::Pair) = push!(v, p)
 
 @inline create_attr(p::Pair) = create_attr(first(p), last(p))
 @inline create_attr(🔑::Symbol, v) = create_attr(Val(🔑), v)
@@ -99,13 +96,14 @@ julia> htm"<p>$(Fruit(\\"pineapple\\", '🍍'))</p>"
 @inline create_attr(::Val{Symbol()}, d) = create_attrs(d)
 
 # style attribute
-@inline create_attr(::Val{:style}, d::Union{AbstractDict,AbstractVector{Pair{K,V}}}) where {K,V} = :style => *((cssprop(p) for p in d)...)  # TODO: remove last character?
-@inline cssprop(p::Pair) = *(first(p), ':', last(p), ';')  # TODO: add space between key/value
+@inline create_attr(🔑::Val{:style}, d::AbstractDict) = create_attr(🔑, collect(d))
+@inline create_attr(::Val{:style}, v::AbstractVector{Pair{K,V}}) where {K,V} = :style => string(cssprop.(v)...)  # TODO: remove last character?
+@inline cssprop(p::Pair) = string(first(p), ':', last(p), ';')  # TODO: add space between key/value
 @inline cssprop(p::Pair{Symbol,V}) where {V} = cssprop(string(first(p)) => last(p))
 
 # class attribute
 @inline create_attr(::Val{:class}, s::AbstractString) = :class => create_value(s)
-@inline create_attr(::Val{:class}, m::AbstractSet) = :class => *((*(c, ' ') for c in m)...)  # TODO: adjust spaces around classes?
+@inline create_attr(::Val{:class}, m::AbstractSet) = :class => string((c -> *(c, ' ')).(m)...)  # TODO: adjust spaces around classes?
 @inline create_attr(🔑::Val{:class}, v) = create_attr(🔑, Set(v))
 
 """
@@ -131,7 +129,7 @@ end
 @inline attrstoexpr(x) = isempty(x) ? Pair{Symbol,Any}[] : :($(create_attrs)($(vectoexpr(x))))
 @inline childrentoexpr(x) = isempty(x) ? Any[] : :($(render)($(toexpr(x))))
 
-@inline vectoexpr(v::AbstractVector) = :([$(toexpr.(v)...)])  # TODO: should use reduce(vcat, v)? benchmark
+@inline vectoexpr(v::AbstractVector) = :([$(toexpr.(v)...)])
 @inline valtoexpr(v::AbstractVector) = length(v) > 1 ? toexpr(v) : (isempty(v) ? "" : toexpr(first(v)))
 @inline function macrotoexpr(v::AbstractVector)
     length(v) > 1 && return toexpr(v)
