@@ -10,9 +10,24 @@ const r = Hyperscript.render
 @testset "HTM.jl" begin
     # Warning: some test cases may not represent supported usage.
     @testset "Features" begin
-        @testset "Spread attributes" begin
-            attrs = Dict("class" => "fruit")
+        @testset "Spread attributes" for attrs in (["class" => "fruit"], Dict("class" => "fruit"))
             @test htm"<div $(attrs)></div>" |> r == "<div class=\"fruit\"></div>"
+        end
+
+        @testset "Styles" begin
+            @testset "Interpolations" for style in (["background" => "orange"], Dict("background" => "orange"))
+                @test htm"<span style=$(style)>pineapple</span>" |> r == "<span style=\"background:orange;\">pineapple</span>"
+            end
+            @test htm"<span style='background:$(\"orange\");'>pineapple</span>" |> r == "<span style=\"background:orange;\">pineapple</span>"
+            @test_broken htm"<span style=background:$(\"orange\");>pineapple</span>" |> r == "<span style=\"background:orange;\">pineapple</span>"
+        end
+
+        @testset "Classes" begin
+            @testset "Interpolations" for class in ("fruit sour ", ["fruit", "sour", "sour"], Set(["fruit", "sour", "sour"]))
+                # TODO: remove space at the end
+                @test htm"<div class=$(class)></div>" |> r == "<div class=\"fruit sour \"></div>"
+            end
+            @test htm"<div class='$(\"sour\") fruit'></div>" |> r == "<div class=\" fruit sour \"></div>"
         end
 
         @testset "Self-closing tags" begin
@@ -68,17 +83,6 @@ const r = Hyperscript.render
             @test htm"<div><!-- 🍌 --></div>" |> r == "<div></div>"
         end
 
-        @testset "Styles" begin
-            style = Dict("background" => "orange")
-            @test htm"<span style=$(style)>pineapple</span>" |> r == "<span style=\"background:orange;\">pineapple</span>"
-            @test htm"<span style='background:$(style[\"background\"]);'>pineapple</span>" |> r == "<span style=\"background:orange;\">pineapple</span>"
-        end
-
-        @testset "Classes" begin
-            # TODO: support iterables in general!
-            @test htm"<div class=$([\"fruit\", \"sour\", \"sour\"])></div>" |> r == "<div class=\"fruit sour \"></div>"
-        end
-
         @testset "Callbacks" begin
             @test_broken htm"<button onclick=$(() -> pineapples += 1)>🍍</button>" |> r == "<button onclick=\"pineapples += 1\">🍍</button>"
         end
@@ -110,7 +114,7 @@ const r = Hyperscript.render
             end
 
             @testset "As attributes" begin
-                @testset "As keys" for key in ("class", :class, nothing, true, missing, 1, 1.0, [1, 2, 3], (1, 2, 3), "fruit" => "pineapple")
+                @testset "As keys" for key in ("class", :class, nothing, true, missing, 1, 1.0, [1, 2, 3], (1, 2, 3), "class" => "fruit")
                     @test_throws MethodError htm"<div $(key)=fruit></div>"
                 end
 
@@ -155,8 +159,8 @@ const r = Hyperscript.render
                 @test htm"<div>$(\"string\")</div>" |> r == "<div>string</div>"
                 @test htm"<div>$([1, 2, 3])</div>" |> r == "<div>123</div>"
                 @test htm"<div>$((1, 2, 3))</div>" |> r == "<div>123</div>"
-                @test htm"<div>$(\"fruit\" => \"pineapple\")</div>" |> r == "<div>&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;</div>"
-                @test htm"<div>$(Dict(\"fruit\" => \"pineapple\"))</div>" |> r == "<div>Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;</div>"
+                @test htm"<div>$(\"class\" => \"fruit\")</div>" |> r == "<div>&#34;class&#34; &#61;&#62; &#34;fruit&#34;</div>"
+                @test htm"<div>$(Dict(\"class\" => \"fruit\"))</div>" |> r == "<div>Dict&#40;&#34;class&#34; &#61;&#62; &#34;fruit&#34;&#41;</div>"
 
                 @testset "Exotic objects" begin
                     @test htm"<div>$(md\"# 🍍\")</div>" |> r == "<div><div class=\"markdown\"><h1>🍍</h1>\n</div></div>"
@@ -167,7 +171,7 @@ const r = Hyperscript.render
 
             @testset "As attributes" begin
                 @testset "As keys" begin
-                    @test_throws MethodError htm"<div $(Dict(\"fruit\" => \"pineapple\"))=fruit></div>" |> r == "<div fruit=\"pineapple\" =\"fruit\"></div>"
+                    @test_throws MethodError htm"<div $(Dict(\"class\" => \"fruit\"))=pineapple></div>" |> r == "<div class=\"fruit\" =\"pineapple\"></div>"
                 end
 
                 @testset "As values" begin
@@ -178,8 +182,8 @@ const r = Hyperscript.render
                     @test htm"<div key=$(true)></div>" |> r == "<div key></div>"
                     @test htm"<div key=$(:symbol)></div>" |> r == "<div key=\"symbol\"></div>"
                     @test htm"<div key=$(\"string\")></div>" |> r == "<div key=\"string\"></div>"
-                    @test htm"<div key=$(\"fruit\" => \"pineapple\")></div>" |> r == "<div key=\"&#34;fruit&#34; =&#62; &#34;pineapple&#34;\"></div>"
-                    @test htm"<div key=$(Dict(\"fruit\" => \"pineapple\"))></div>" |> r == "<div key=\"Dict(&#34;fruit&#34; =&#62; &#34;pineapple&#34;)\"></div>"
+                    @test htm"<div key=$(\"class\" => \"fruit\")></div>" |> r == "<div key=\"&#34;class&#34; =&#62; &#34;fruit&#34;\"></div>"
+                    @test htm"<div key=$(Dict(\"class\" => \"fruit\"))></div>" |> r == "<div key=\"Dict(&#34;class&#34; =&#62; &#34;fruit&#34;)\"></div>"
                 end
             end
 
@@ -194,8 +198,8 @@ const r = Hyperscript.render
                         @test htm"<$(:symbol)></$(:symbol)>" |> r == "<symbol></symbol>"
                         @test htm"<$(\"string\")></$(\"string\")>" |> r == "<string></string>"
                         @test htm"<$([1, 2, 3])></$([1, 2, 3])>" |> r == "<123></123>"
-                        @test htm"<$(\"fruit\" => \"pineapple\")></$(\"fruit\" => \"pineapple\")>" |> r == "<&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
-                        @test htm"<$(Dict(\"fruit\" => \"pineapple\"))></$(Dict(\"fruit\" => \"pineapple\"))>" |> r == "<Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                        @test htm"<$(\"class\" => \"fruit\")></$(\"class\" => \"fruit\")>" |> r == "<&#34;class&#34; &#61;&#62; &#34;fruit&#34;></&#34;class&#34; &#61;&#62; &#34;fruit&#34;>"
+                        @test htm"<$(Dict(\"class\" => \"fruit\"))></$(Dict(\"class\" => \"fruit\"))>" |> r == "<Dict&#40;&#34;class&#34; &#61;&#62; &#34;fruit&#34;&#41;></Dict&#40;&#34;class&#34; &#61;&#62; &#34;fruit&#34;&#41;>"
                     end
 
                     @testset "Partial tags" begin
@@ -207,8 +211,8 @@ const r = Hyperscript.render
                         @test htm"<h$(:symbol)></h$(:symbol)>" |> r == "<hsymbol></hsymbol>"
                         @test htm"<h$(\"string\")></h$(\"string\")>" |> r == "<hstring></hstring>"
                         @test htm"<h$([1, 2, 3])></h$([1, 2, 3])>" |> r == "<h123></h123>"
-                        @test htm"<h$(\"fruit\" => \"pineapple\")></h$(\"fruit\" => \"pineapple\")>" |> r == "<h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
-                        @test htm"<h$(Dict(\"fruit\" => \"pineapple\"))></h$(Dict(\"fruit\" => \"pineapple\"))>" |> r == "<hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                        @test htm"<h$(\"class\" => \"fruit\")></h$(\"class\" => \"fruit\")>" |> r == "<h&#34;class&#34; &#61;&#62; &#34;fruit&#34;></h&#34;class&#34; &#61;&#62; &#34;fruit&#34;>"
+                        @test htm"<h$(Dict(\"class\" => \"fruit\"))></h$(Dict(\"class\" => \"fruit\"))>" |> r == "<hDict&#40;&#34;class&#34; &#61;&#62; &#34;fruit&#34;&#41;></hDict&#40;&#34;class&#34; &#61;&#62; &#34;fruit&#34;&#41;>"
                     end
                 end
 
@@ -222,8 +226,8 @@ const r = Hyperscript.render
                         @test htm"<$(:symbol)><//>" |> r == "<symbol></symbol>"
                         @test htm"<$(\"string\")><//>" |> r == "<string></string>"
                         @test htm"<$([1, 2, 3])><//>" |> r == "<123></123>"
-                        @test htm"<$(\"fruit\" => \"pineapple\")><//>" |> r == "<&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
-                        @test htm"<$(Dict(\"fruit\" => \"pineapple\"))><//>" |> r == "<Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></Dict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                        @test htm"<$(\"class\" => \"fruit\")><//>" |> r == "<&#34;class&#34; &#61;&#62; &#34;fruit&#34;></&#34;class&#34; &#61;&#62; &#34;fruit&#34;>"
+                        @test htm"<$(Dict(\"class\" => \"fruit\"))><//>" |> r == "<Dict&#40;&#34;class&#34; &#61;&#62; &#34;fruit&#34;&#41;></Dict&#40;&#34;class&#34; &#61;&#62; &#34;fruit&#34;&#41;>"
                     end
 
                     @testset "Partial tags" begin
@@ -235,8 +239,8 @@ const r = Hyperscript.render
                         @test htm"<h$(:symbol)><//>" |> r == "<hsymbol></hsymbol>"
                         @test htm"<h$(\"string\")><//>" |> r == "<hstring></hstring>"
                         @test htm"<h$([1, 2, 3])><//>" |> r == "<h123></h123>"
-                        @test htm"<h$(\"fruit\" => \"pineapple\")><//>" |> r == "<h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;></h&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;>"
-                        @test htm"<h$(Dict(\"fruit\" => \"pineapple\"))><//>" |> r == "<hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;></hDict&#40;&#34;fruit&#34; &#61;&#62; &#34;pineapple&#34;&#41;>"
+                        @test htm"<h$(\"class\" => \"fruit\")><//>" |> r == "<h&#34;class&#34; &#61;&#62; &#34;fruit&#34;></h&#34;class&#34; &#61;&#62; &#34;fruit&#34;>"
+                        @test htm"<h$(Dict(\"class\" => \"fruit\"))><//>" |> r == "<hDict&#40;&#34;class&#34; &#61;&#62; &#34;fruit&#34;&#41;></hDict&#40;&#34;class&#34; &#61;&#62; &#34;fruit&#34;&#41;>"
                     end
                 end
             end

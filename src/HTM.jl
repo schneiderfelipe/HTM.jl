@@ -68,39 +68,46 @@ julia> htm"<p>$(Fruit(\\"pineapple\\", '🍍'))</p>"
 @inline render(🍎) = 🍎
 @inline render(::Bool) = nothing
 
-@inline rendertag(🍎) = 🍎
-@inline rendertag(v::AbstractVector) = string(rendertag.(v)...)
-@inline rendertag(v::AbstractVector{T}) where {T<:AbstractString} = *(rendertag.(v)...)
+@inline create_tag(🍎) = 🍎
+@inline create_tag(v::AbstractVector) = string(create_tag.(v)...)
+@inline create_tag(v::AbstractVector{S}) where {S<:AbstractString} = *(create_tag.(v)...)
 
 
-# TODO: REVIEW renderattrs & friends
-# TODO: simplify and benchmark things related to renderattrs
-
-@inline rendervalue(🍎) = 🍎
-@inline rendervalue(b::Bool) = b ? nothing : error("should have been disabled")  # TODO: can we pass this logic to isenabled? It feels too spread out
-@inline rendervalue(v::AbstractVector{T}) where {T<:AbstractString} = *(v...)
+@inline create_value(🍎) = 🍎
+@inline create_value(b::Bool) = b ? nothing : error("should have been disabled")
+@inline create_value(v::AbstractVector{S}) where {S<:AbstractString} = *(v...)
 
 @inline isenabled(🍎) = true
 @inline isenabled(b::Bool) = b
 @inline isenabled(::Nothing) = false
-@inline isenabled(p::Pair) = isenabled(last(p))
 
 
-@inline renderattrs(d::AbstractDict) = renderattrs(collect(d))
-@inline renderattrs(v::AbstractVector) = (attrs = Pair{String,Any}[]; foreach(p -> isenabled(p) && pushattr!(attrs, renderattr(p)), v); attrs)  # TODO: better type for attrs?
-@inline pushattr!(v::AbstractVector, p::Pair) = push!(v, p)  # TODO: benchmark isenabled here and filter below instead of in renderattrs
+# --- #
+# TODO: REVIEW create_attrs & friends
+# TODO: simplify and benchmark things related to create_attrs
+@inline create_attrs(d::AbstractDict) = create_attrs(collect(d))
+@inline create_attrs(v::AbstractVector) = (attrs = Pair{String,Any}[]; foreach(p -> isenabled(last(p)) && pushattr!(attrs, create_attr(p)), v); attrs)  # TODO: better type for attrs?
+@inline pushattr!(v::AbstractVector, p::Pair) = push!(v, p)  # TODO: benchmark isenabled here and filter below instead of in create_attrs
 @inline pushattr!(v::AbstractVector, p::AbstractVector) = append!(v, p)
 
-@inline renderattr(p::Pair) = renderattr(first(p), last(p))
-@inline renderattr(k, v) = renderattr(Val(Symbol(k)), v)  # TODO: use symbols all the way for keys, as we don't interpolate them anyway
+@inline create_attr(p::Pair) = create_attr(first(p), last(p))
+@inline create_attr(🔑, v) = create_attr(Val(Symbol(🔑)), v)  # TODO: use symbols all the way for keys, as we don't interpolate them anyway
+# --- #
 
-# TODO: is it worth using attrs = Pair{Symbol,Any}[]? Benchmark
-@inline renderattr(::Val{C}, x) where {C} = string(C) => rendervalue(x)  # no interps in keys: use spread attributes
-@inline renderattr(::Val{Symbol()}, d) = renderattrs(d)  # spread attributes
 
-# TODO: support vector of pairs as well
-@inline renderattr(::Val{:style}, d::AbstractDict) = "style" => *((string(first(p), ':', last(p), ';') for p in d)...)  # TODO: should we process first/last and not dict? TODO: add space between key/value
-@inline renderattr(::Val{:class}, v::AbstractVector) = "class" => *((string(c, ' ') for c in Set(v))...)  # TODO: remove space at the end
+# TODO: is it worth using attrs = Pair{Symbol,Any}[]? Benchmark!
+@inline create_attr(::Val{C}, x) where {C} = string(C) => create_value(x)  # no interps in keys: use spread attributes
+
+# spread attributes
+@inline create_attr(::Val{Symbol()}, d) = create_attrs(d)
+
+# style attribute
+@inline create_attr(::Val{:style}, d::Union{AbstractDict,AbstractVector{Pair{K,V}}}) where {K,V} = "style" => *((*(first(p), ':', last(p), ';') for p in d)...)  # TODO: add space between key/value, and remove last character?
+
+# class attribute
+@inline create_attr(::Val{:class}, s::AbstractString) = "class" => create_value(s)
+@inline create_attr(::Val{:class}, m::AbstractSet) = "class" => *((*(c, ' ') for c in m)...)  # TODO: adjust spaces around classes?
+@inline create_attr(🔑::Val{:class}, v) = create_attr(🔑, Set(v))
 
 
 # TODO: REVIEW all toexpr...
@@ -111,8 +118,8 @@ julia> htm"<p>$(Fruit(\\"pineapple\\", '🍍'))</p>"
 end
 
 @inline function toexpr(🍍::Node)
-    tag = isempty(🍍.tag) ? "" : :($(rendertag)($(toexprvec(🍍.tag))))
-    attrs = isempty(🍍.attrs) ? Pair{String,Any}[] : :($(renderattrs)($(toexprvec(🍍.attrs))))
+    tag = isempty(🍍.tag) ? "" : :($(create_tag)($(toexprvec(🍍.tag))))
+    attrs = isempty(🍍.attrs) ? Pair{String,Any}[] : :($(create_attrs)($(toexprvec(🍍.attrs))))
     children = isempty(🍍.children) ? Any[] : :($(render)($(toexpr(🍍.children))))
     return :($(create_element)($(tag), $(attrs), $(children)))
 end
@@ -234,7 +241,7 @@ HTM.Node(["div"], ["class" => ["fruit"]], Union{String, HTM.Node}["🍍"])
     tag = parsetag(io)
     attrs = parseattrs(io)
     read(io, Char) === '/' && (skipchars(isequal('>'), io); return Node(tag, attrs))
-    endtag = string("</", rendertag(tag), '>')
+    endtag = *("</", create_tag(tag), '>')
     children = parseelems(io -> !(startswith(io, endtag) || startswith(io, UENDTAG)), io)
     skipstartswith(io, endtag) || skipstartswith(io, UENDTAG) || error("tag not properly closed")
     return Node(tag, attrs, children)
@@ -285,12 +292,12 @@ julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
     return attrs
 end
 @inline function parseattr!(io::IO, attrs::AbstractVector)
-    eof(io) && return push!(attrs, key => [raw"$(true)"])  # TODO: do we need this? test! this seems like defective input, just throw an error!
+    eof(io) && return push!(attrs, 🔑 => [raw"$(true)"])  # TODO: do we need this? test! this seems like defective input, just throw an error! key is not even defined here!
     startswith(io, '$') && return push!(attrs, "" => [parseinterp(io)])  # spread attributes
     startswith(io, "\\\$") && skip(io, 1)  # no interps in keys: just ignore escaping
-    key = parsekey(io)
+    🔑 = parsekey(io)
     let 🍒 = read(io, Char)
-        push!(attrs, key => 🍒 === '=' ? parsevalue(io) : [raw"$(true)"])
+        push!(attrs, 🔑 => 🍒 === '=' ? parsevalue(io) : [raw"$(true)"])
         🍒 ∈ ">/" && skip(io, -1)
     end
     return attrs
