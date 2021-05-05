@@ -108,6 +108,10 @@ const r = Hyperscript.render
         """ |> r == "<div class=\"fruit\">\n        🍍\n    </div>"
     end
 
+    @testset "Edge cases" begin
+        @test htm"<html class=no-js lang=\"\" />" |> r == "<html class=\"no-js\" lang=\"\"></html>"
+    end
+
     @testset "Interpolations" begin
         @testset "Variables" begin
             @testset "As children" begin

@@ -123,7 +123,7 @@ end
 # expressions for generic contexts
 @inline toexpr(s::AbstractString) = (length(s) > 1 && startswith(s, '$')) ? Meta.parse(s[nextind(s, begin):end]) : s
 @inline toexpr(v::AbstractVector) = length(v) === 1 ? :($(toexpr(first(v)))) : vectoexpr(v)
-@inline toexpr(p::Pair) = (v = last(p); :($(:(first($(p)))) => $(length(v) > 1 ? toexpr(v) : toexpr(first(v)))))  # no interps in keys
+@inline toexpr(p::Pair) = (v = last(p); :($(:(first($(p)))) => $(valtoexpr(last(p)))))  # no interps in keys
 @inline toexpr(🍍::Node) = :($(create_element)($(tagtoexpr(🍍.tag)), $(attrstoexpr(🍍.attrs)), $(childrentoexpr(🍍.children))))
 
 # expressions for specific contexts
@@ -132,6 +132,7 @@ end
 @inline childrentoexpr(x) = isempty(x) ? Any[] : :($(render)($(toexpr(x))))
 
 @inline vectoexpr(v::AbstractVector) = :([$(toexpr.(v)...)])  # TODO: should use reduce(vcat, v)? benchmark
+@inline valtoexpr(v::AbstractVector) = length(v) > 1 ? toexpr(v) : (isempty(v) ? "" : toexpr(first(v)))
 @inline function macrotoexpr(v::AbstractVector)
     length(v) > 1 && return toexpr(v)
     isempty(v) && return nothing
