@@ -72,34 +72,11 @@ julia> htm"<p>$(Fruit(\\"pineapple\\", '🍍'))</p>"
 @inline rendertag(v::AbstractVector) = string(rendertag.(v)...)
 @inline rendertag(v::AbstractVector{T}) where {T<:AbstractString} = *(rendertag.(v)...)
 
+
+# TODO: REVIEW renderattrs & friends
 # TODO: simplify and benchmark things related to renderattrs
-@inline function renderattrs(v::AbstractVector)
-    attrs = Pair{String,Any}[]  # TODO: better type?
-    # TODO: use foreach for this and others
-    for p in v
-        isenabled(p) && pushattr!(attrs, renderattr(p))
-    end
-    return attrs
-end
-@inline renderattrs(d::AbstractDict) = renderattrs(collect(d))  # TODO: remove AbstractDict and use it as a fallback?
-@inline pushattr!(v::AbstractVector, p::Pair) = push!(v, p)
-@inline pushattr!(v::AbstractVector, p::AbstractVector) = append!(v, p)
 
-@inline renderattr(p::Pair) = renderattr(first(p), last(p))
-@inline renderattr(k, v) = renderattr(Val(Symbol(k)), v)  # TODO: use symbols all the way for keys, as we don't interpolate them anyway
-
-# TODO: support vector of pairs as well
-@inline renderattr(::Val{:style}, d::AbstractDict) = "style" => *((string(first(p), ':', last(p), ';') for p in d)...)  # TODO: should we process first/last and not dict? TODO: add space between key/value
-
-@inline renderattr(::Val{:class}, v::AbstractVector) = "class" => *((string(c, ' ') for c in Set(v))...)  # TODO: remove space at the end
-
-@inline renderattr(::Val{C}, x) where {C} = renderkey(C) => rendervalue(x)  # TODO: should we really use a separate function for keys?
-@inline renderattr(::Val{Symbol()}, d) = renderattrs(d)  # spread attributes
-
-@inline renderkey(🍎) = 🍎  # no interps in keys: use spread attributes  # TODO: probably useless if we only use symbols
-@inline renderkey(s::Symbol) = string(s)  # TODO: is it worth using attrs = Pair{Symbol,Any}[]? Benchmark
 @inline rendervalue(🍎) = 🍎
-
 @inline rendervalue(b::Bool) = b ? nothing : error("should have been disabled")  # TODO: can we pass this logic to isenabled? It feels too spread out
 @inline rendervalue(v::AbstractVector{T}) where {T<:AbstractString} = *(v...)
 
@@ -108,7 +85,25 @@ end
 @inline isenabled(::Nothing) = false
 @inline isenabled(p::Pair) = isenabled(last(p))
 
-# TODO: review all toexpr...
+
+@inline renderattrs(d::AbstractDict) = renderattrs(collect(d))
+@inline renderattrs(v::AbstractVector) = (attrs = Pair{String,Any}[]; foreach(p -> isenabled(p) && pushattr!(attrs, renderattr(p)), v); attrs)  # TODO: better type for attrs?
+@inline pushattr!(v::AbstractVector, p::Pair) = push!(v, p)  # TODO: benchmark isenabled here and filter below instead of in renderattrs
+@inline pushattr!(v::AbstractVector, p::AbstractVector) = append!(v, p)
+
+@inline renderattr(p::Pair) = renderattr(first(p), last(p))
+@inline renderattr(k, v) = renderattr(Val(Symbol(k)), v)  # TODO: use symbols all the way for keys, as we don't interpolate them anyway
+
+# TODO: is it worth using attrs = Pair{Symbol,Any}[]? Benchmark
+@inline renderattr(::Val{C}, x) where {C} = string(C) => rendervalue(x)  # no interps in keys: use spread attributes
+@inline renderattr(::Val{Symbol()}, d) = renderattrs(d)  # spread attributes
+
+# TODO: support vector of pairs as well
+@inline renderattr(::Val{:style}, d::AbstractDict) = "style" => *((string(first(p), ':', last(p), ';') for p in d)...)  # TODO: should we process first/last and not dict? TODO: add space between key/value
+@inline renderattr(::Val{:class}, v::AbstractVector) = "class" => *((string(c, ' ') for c in Set(v))...)  # TODO: remove space at the end
+
+
+# TODO: REVIEW all toexpr...
 @inline function toexprmacro(v::AbstractVector)
     length(v) > 1 && return toexpr(v)
     isempty(v) && return nothing
@@ -124,7 +119,6 @@ end
 @inline toexpr(s::AbstractString) = (length(s) > 1 && startswith(s, '$')) ? Meta.parse(s[nextind(s, begin):end]) : s
 @inline toexpr(v::AbstractVector) = length(v) == 1 ? :($(toexpr(first(v)))) : toexprvec(v)
 @inline toexpr(p::Pair) = (v = last(p); :($(first(p)) => $(length(v) > 1 ? toexpr(v) : toexpr(first(v)))))  # no interps in keys
-@inline toexpr(d::AbstractVector{Pair}) = toexprvec(d)  # TODO: requires more specific type? Check this!
 
 @inline toexprvec(v::AbstractVector) = :([$(toexpr.(v)...)])  # TODO: should use reduce(vcat, v)?
 
@@ -278,7 +272,7 @@ julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\">🍍..."))
 julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
 2-element Vector{Pair{String, Vector{String}}}:
  "class" => ["fruit"]
- "" => ["\$(attrs)"]
+      "" => ["\$(attrs)"]
 ```
 """
 @inline parseattrs(io::IO) = parseattrs!(io, Pair{String,Vector{String}}[])
