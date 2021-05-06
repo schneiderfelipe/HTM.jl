@@ -34,15 +34,17 @@ julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."
 ```
 """
 @inline parseelems(io::IO) = parseelems(io -> true, io)
-@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, Union{String,HTM.Node}[])
+@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, @SVector Union{String,HTM.Node}[])
 @inline function parseelems!(predicate, io::IO, elems::AbstractVector)
     while !eof(io) && predicate(io)
-        skipcomment(io) || pushelem!(elems, parseelem(io))
+        skipcomment(io) || (elems = pushelem!(elems, parseelem(io)))
     end
     return elems
 end
 @inline pushelem!(elems::AbstractVector, elem) = push!(elems, elem)
+@inline pushelem!(elems::StaticVector, elem) = push(elems, elem)
 @inline pushelem!(elems::AbstractVector, elem::AbstractString) = (isempty(elem) || all(isspace, elem)) ? elems : push!(elems, elem)  # TODO: detect all spaces during reading for performance
+@inline pushelem!(elems::StaticVector, elem::AbstractString) = (isempty(elem) || all(isspace, elem)) ? elems : push(elems, elem)  # TODO: detect all spaces during reading for performance
 
 @doc raw"""
     parseelem(io::IO)

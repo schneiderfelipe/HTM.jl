@@ -1,6 +1,8 @@
 module HTM
 
 using Hyperscript
+using StaticArrays
+
 export @htm_str
 
 const UENDTAG = "<//>"
