@@ -10,7 +10,3 @@ The following open-source packages are **possible backends** (not thoroughly tes
 - [Hyperscript.jl](https://github.com/yurivish/Hyperscript.jl) is the default backend
 - [WebIO.jl](https://github.com/JuliaGizmos/WebIO.jl)
 - [Hiccup.jl](https://github.com/JunoLab/Hiccup.jl)
-
-The following open-source packages **extend and play nice** with HTM.jl:
-
-- [JSExpr.jl](https://github.com/JuliaGizmos/JSExpr.jl) offer an elegant way of writing JavaScript.

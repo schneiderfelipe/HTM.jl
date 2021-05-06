@@ -50,7 +50,7 @@ true
 ```
 
 Multiple top-level elements
-(["document fragments"](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment),
+(["document fragments"](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment) or
 [`React.Fragment`](https://pt-br.reactjs.org/docs/react-api.html#reactfragment))
 are represented as arrays:
 
@@ -104,9 +104,8 @@ htm"<p><strong>This is $(orange(\"really\")) important.</strong></p>"
 ```
 
 You can even use
-[`@html_str`](https://docs.julialang.org/en/v1/base/strings/#Base.Docs.@html_str)
-(from `Base.Docs`)
-and [`@md_str`](https://docs.julialang.org/en/v1/stdlib/Markdown/)
+[`Base.Docs.@html_str`](https://docs.julialang.org/en/v1/base/strings/#Base.Docs.@html_str)
+and [`Markdown.@md_str`](https://docs.julialang.org/en/v1/stdlib/Markdown/)
 from the [standard library](https://docs.julialang.org/en/v1/):
 
 ```jldoctest
@@ -115,6 +114,10 @@ julia> using Markdown
 julia> htm"<div>$(md\"# 🍍\")</div>"
 <div><div class="markdown"><h1>🍍</h1>
 </div></div>
+
+julia> md"# $(htm\"<em>🍍</em>\")"
+  <em>🍍</em>
+  ≡≡≡≡≡≡≡≡≡≡≡≡
 ```
 
 ```jldoctest

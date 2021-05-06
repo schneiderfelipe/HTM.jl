@@ -2,13 +2,15 @@
 CurrentModule = HTM
 ```
 
-# Docstrings
-
-```@autodocs
-Modules = [HTM]
-```
+# Internals
 
 ## Index
 
 ```@index
+```
+
+## Docstrings
+
+```@autodocs
+Modules = [HTM]
 ```
