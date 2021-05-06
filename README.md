@@ -49,10 +49,12 @@ and [Hypertext Literal](https://github.com/observablehq/htl):
 - Spread attributes: `htm"<div $(attrs)></div>"`
 - Self-closing tags: `htm"<div />"`
 - Multiple root elements (fragments): `htm"<div /><div />"`
+- Short circuit rendering: `htm"<div>$(hidefruit || '🍍')</div>"`
 - Boolean attributes: `htm"<div draggable />"` or `htm"<div draggable=$(true) />"`
-- HTML's optional quotes: `htm"<div class=fruit></div>"`
+- HTML optional quotes: `htm"<div class=fruit></div>"`
 - Styles: `htm"<div style=$(style)></div>"`
 - Universal end-tags: `htm"<div>🍍<//>"`
+- HTML-style comments: `htm"<div><!-- 🍌 --></div>"`
 
 Furthermore, the components can be constructed using
 [Julia's display system](https://docs.julialang.org/en/v1/base/io-network/#Multimedia-I/O):
@@ -74,7 +76,7 @@ you like pineapples).
 
 ## Project status
 
-HTM.jl is a small (~300 lines of code) open-source Julia project.
+HTM.jl is a small (<400 lines of code) open-source Julia project.
 It was once called JSX.jl.
 Its main goal is to create a fully-featured, backend-agnostic (any library
 that produces HTML elements can be used as a backend) alternative to the

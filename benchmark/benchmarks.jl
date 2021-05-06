@@ -36,6 +36,16 @@ suite[raw"<div /><div />"]["direct"] = @benchmarkable (m("div"), m("div"))
 suite[raw"<div /><div />"]["create"] = @benchmarkable htm"<div /><div />"
 suite[raw"<div /><div />"]["parser"] = @benchmarkable HTM.parse(raw"<div /><div />")
 
+suite[raw"<div>$(hidefruit || '🍍')</div>"] = BenchmarkGroup(["short-circuit", "child-interps", "has-children", "end-tags"],
+    "direct" => BenchmarkGroup([]),
+    "create" => BenchmarkGroup([]),
+    "parser" => BenchmarkGroup([]),
+)
+hidefruit = false
+suite[raw"<div>$(hidefruit || '🍍')</div>"]["direct"] = @benchmarkable m("div", hidefruit || '🍍')
+suite[raw"<div>$(hidefruit || '🍍')</div>"]["create"] = @benchmarkable htm"<div>$(hidefruit || '🍍')</div>"
+suite[raw"<div>$(hidefruit || '🍍')</div>"]["parser"] = @benchmarkable HTM.parse(raw"<div>$(hidefruit || '🍍')</div>")
+
 suite[raw"<div draggable />"] = BenchmarkGroup(["optional-attrs", "self-closing-tags"],
     "direct" => BenchmarkGroup([]),
     "create" => BenchmarkGroup([]),
@@ -83,27 +93,16 @@ suite[raw"<div>🍍<//>"]["direct"] = @benchmarkable m("div", "🍍")
 suite[raw"<div>🍍<//>"]["create"] = @benchmarkable htm"<div>🍍<//>"
 suite[raw"<div>🍍<//>"]["parser"] = @benchmarkable HTM.parse(raw"<div>🍍<//>")
 
+suite[raw"<div><!-- 🍌 --></div>"] = BenchmarkGroup(["html-comment", "end-tags"],
+    "direct" => BenchmarkGroup([]),
+    "create" => BenchmarkGroup([]),
+    "parser" => BenchmarkGroup([]),
+)
+suite[raw"<div><!-- 🍌 --></div>"]["direct"] = @benchmarkable m("div")
+suite[raw"<div><!-- 🍌 --></div>"]["create"] = @benchmarkable htm"<div><!-- 🍌 --></div>"
+suite[raw"<div><!-- 🍌 --></div>"]["parser"] = @benchmarkable HTM.parse(raw"<div><!-- 🍌 --></div>")
+
 # --- Others ---
-
-suite[raw"<div id=$(id)>$(content)</div>"] = BenchmarkGroup(["attr-interps", "child-interps", "optional-quotes", "end-tags"],
-    "direct" => BenchmarkGroup([]),
-    "create" => BenchmarkGroup([]),
-    "parser" => BenchmarkGroup([]),
-)
-id = 23
-content = "Hello HTM.jl🍍!"
-suite[raw"<div id=$(id)>$(content)</div>"]["direct"] = @benchmarkable m("div", id=id, content)
-suite[raw"<div id=$(id)>$(content)</div>"]["create"] = @benchmarkable htm"<div id=$(id)>$(content)</div>"
-suite[raw"<div id=$(id)>$(content)</div>"]["parser"] = @benchmarkable HTM.parse(raw"<div id=$(id)>$(content)</div>")
-
-suite[raw"<div>🍍</div>"] = BenchmarkGroup(["has-children", "end-tags"],
-    "direct" => BenchmarkGroup([]),
-    "create" => BenchmarkGroup([]),
-    "parser" => BenchmarkGroup([]),
-)
-suite[raw"<div>🍍</div>"]["direct"] = @benchmarkable m("div", "🍍")
-suite[raw"<div>🍍</div>"]["create"] = @benchmarkable htm"<div>🍍</div>"
-suite[raw"<div>🍍</div>"]["parser"] = @benchmarkable HTM.parse(raw"<div>🍍</div>")
 
 suite[raw"<div class=fruit>🍍</div>"] = BenchmarkGroup(["optional-quotes", "has-attrs", "has-children", "end-tags"],
     "direct" => BenchmarkGroup([]),
@@ -113,6 +112,17 @@ suite[raw"<div class=fruit>🍍</div>"] = BenchmarkGroup(["optional-quotes", "ha
 suite[raw"<div class=fruit>🍍</div>"]["direct"] = @benchmarkable m("div", class="fruit", "🍍")
 suite[raw"<div class=fruit>🍍</div>"]["create"] = @benchmarkable htm"<div class=fruit>🍍</div>"
 suite[raw"<div class=fruit>🍍</div>"]["parser"] = @benchmarkable HTM.parse(raw"<div class=fruit>🍍</div>")
+
+suite[raw"<div id=$(id)>$(content)</div>"] = BenchmarkGroup(["attr-interps", "child-interps", "has-children", "optional-quotes", "end-tags"],
+    "direct" => BenchmarkGroup([]),
+    "create" => BenchmarkGroup([]),
+    "parser" => BenchmarkGroup([]),
+)
+id = 23
+content = "Hello HTM.jl🍍!"
+suite[raw"<div id=$(id)>$(content)</div>"]["direct"] = @benchmarkable m("div", id=id, content)
+suite[raw"<div id=$(id)>$(content)</div>"]["create"] = @benchmarkable htm"<div id=$(id)>$(content)</div>"
+suite[raw"<div id=$(id)>$(content)</div>"]["parser"] = @benchmarkable HTM.parse(raw"<div id=$(id)>$(content)</div>")
 
 # TODO: component concept through Julia's display system
 # TODO: some other ideas from:

@@ -50,7 +50,8 @@ true
 ```
 
 Multiple top-level elements
-(["document fragments"](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment))
+(["document fragments"](https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment) or
+[`React.Fragment`](https://pt-br.reactjs.org/docs/react-api.html#reactfragment))
 are represented as arrays:
 
 ```jldoctest
@@ -74,7 +75,6 @@ using HTM  # hide
 using Plots
 
 default(size=(250, 250))  # hide
-# Graph simplified from <https://www.desmos.com/calculator/eds5nef5cj>.
 p = begin
     plot!(θ -> 30.4 / (2 + sin(θ)) - 9.5, 0, 2π, color=:brown, proj=:polar, legend=nothing)
     for (a, b) in zip([-4  , 3  ,  9.6, 16.2, 22.7, 29.2, 35.7],
@@ -87,6 +87,7 @@ end
 pineapple = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/%E0%B4%95%E0%B5%88%E0%B4%A4%E0%B4%9A%E0%B5%8D%E0%B4%9A%E0%B4%95%E0%B5%8D%E0%B4%95.jpg/800px-%E0%B4%95%E0%B5%88%E0%B4%A4%E0%B4%9A%E0%B5%8D%E0%B4%9A%E0%B4%95%E0%B5%8D%E0%B4%95.jpg"  # hide
 🍍() = htm"<img src=$(pineapple) />"  # hide
 htm"""<div style="display: flex">
+    <!-- Graph simplified from <https://www.desmos.com/calculator/eds5nef5cj>. -->
     <div style="transform: rotate(5deg)">$(p)</div>
     <div style="max-width: 50%">$(🍍())</div>
 </div>"""
@@ -101,6 +102,32 @@ using HTM  # hide
 orange(text) = htm"<span style=\"background: orange\">$(text)</span>"
 htm"<p><strong>This is $(orange(\"really\")) important.</strong></p>"
 ```
+
+You can even use
+[`Base.Docs.@html_str`](https://docs.julialang.org/en/v1/base/strings/#Base.Docs.@html_str)
+and [`Markdown.@md_str`](https://docs.julialang.org/en/v1/stdlib/Markdown/)
+from the [standard library](https://docs.julialang.org/en/v1/):
+
+```jldoctest
+julia> using Markdown
+
+julia> htm"<div>$(md\"# 🍍\")</div>"
+<div><div class="markdown"><h1>🍍</h1>
+</div></div>
+
+julia> md"# $(htm\"<em>🍍</em>\")"
+  <em>🍍</em>
+  ≡≡≡≡≡≡≡≡≡≡≡≡
+```
+
+```jldoctest
+julia> htm"<p>🍍$(html\"&nbsp;\")🍌</p>"
+<p>🍍&nbsp;🍌</p>
+```
+
+!!! info
+    Using `@html_str` from the standard library as above is the recommended
+    strategy for bypassing escaping of HTML entities.
 
 Contrary to
 [JSX](https://reactjs.org/docs/jsx-in-depth.html#choosing-the-type-at-runtime)
@@ -151,7 +178,6 @@ That is useful for mapping data to content via
 using HTM  # hide
 using Colors
 
-# Example taken from <https://observablehq.com/@observablehq/htl>.
 rows = map(enumerate(colormap("Oranges", 5))) do (i, color)
     htm"""<tr>
         <td>$(i)</td>
@@ -165,6 +191,7 @@ header = htm"""<tr>
 </tr>"""
 
 htm"""<table>
+    <!-- Example inspired from <https://observablehq.com/@observablehq/htl>. -->
     <caption>Five shades of 🍍</caption>
     <thead>$(header)</thead>
     <tbody>$(rows)</tbody>
