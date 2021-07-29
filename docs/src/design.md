@@ -15,6 +15,8 @@ This allows it to distinguish different contexts such as tags and
 attributes, allowing embedded expressions to be interpreted correctly.
 Unlike regular string interpolation, HTM.jl directly creates content rather
 than reusable templates.
+This is a key design decision: **objects are handed over to backend as they
+are given**.
 
 I also wanted to minimize new syntax.
 The main inspiration was [`htm`](https://github.com/developit/htm) and, like

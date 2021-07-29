@@ -100,7 +100,10 @@ HTM.Node(["div"], [:class => ["fruit"]], Union{String, HTM.Node}["🍍"])
 @inline function parsenode(io::IO)
     skipchars(isequal('<'), io)
     tag = parsetag(io)
-    attrs = parseattrs(io)
+
+    attrs = Pair{Symbol,Vector{String}}[]
+    parseattrs!(io, attrs)
+
     read(io, Char) === '/' && (skipchars(isequal('>'), io); return Node(tag, attrs))
     endtag = *("</", create_tag(tag), '>')
     children = parseelems(io -> !(startswith(io, endtag) || startswith(io, UENDTAG)), io)
@@ -120,9 +123,9 @@ julia> HTM.parsetag(IOBuffer("div class=\\"fruit\\">🍍..."))
 ```
 """
 @inline function parsetag(io::IO)
-    🧩 = String[]
+    🧩 = @SVector String[]
     while !(eof(io) || (🍒 = peek(io, Char)) |> isspace || 🍒 ∈ ">/")
-        push!(🧩, skipstartswith(io, "\\\$") ? "\$" : parseinterp(isspace ⩔ ∈(">/\$\\"), io))
+        🧩 = push(🧩, skipstartswith(io, "\\\$") ? "\$" : parseinterp(isspace ⩔ ∈(">/\$\\"), io))
     end
     return 🧩
 end
@@ -143,14 +146,12 @@ julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
  Symbol("") => ["\$(attrs)"]
 ```
 """
-@inline parseattrs(io::IO) = parseattrs!(io, Pair{Symbol,Vector{String}}[])
 @inline function parseattrs!(io::IO, attrs::AbstractVector)
     while !eof(io)
         skipchars(isspace, io)
         startswith(io, ('>', '/')) && break
         parseattr!(io, attrs)
     end
-    return attrs
 end
 @inline function parseattr!(io::IO, attrs::AbstractVector)
     startswith(io, '$') && return push!(attrs, Symbol() => [parseinterp(io)])  # spread attributes
@@ -160,7 +161,6 @@ end
         push!(attrs, 🔑 => 🍒 === '=' ? parsevalue(io) : [raw"$(true)"])
         🍒 ∈ ">/" && skip(io, -1)
     end
-    return attrs
 end
 
 @doc raw"""

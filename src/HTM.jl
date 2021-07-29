@@ -42,6 +42,7 @@ struct Node
     children::Vector{Union{String,HTM.Node}}
     Node(tag, attrs=Pair{Symbol,Vector{String}}[], children=Union{String,HTM.Node}[]) = new(tag, attrs, children)
 end
+# TODO: make Node("<span>hello</span>") work?
 Base.:(==)(🍍::Node, 🍌::Node) = 🍍.tag == 🍌.tag && 🍍.attrs == 🍌.attrs && 🍍.children == 🍌.children
 
 @doc raw"""
@@ -131,7 +132,7 @@ end
 @inline attrstoexpr(x) = isempty(x) ? Pair{Symbol,Any}[] : :($(create_attrs)($(vectoexpr(x))))
 @inline childrentoexpr(x) = isempty(x) ? Any[] : :($(render)($(toexpr(x))))
 
-@inline vectoexpr(v::AbstractVector) = :([$(toexpr.(v)...)])
+@inline vectoexpr(v::AbstractVector) = (v = toexpr.(v); :($(SVector{length(v),Any})($(v...))))
 @inline valtoexpr(v::AbstractVector) = length(v) > 1 ? toexpr(v) : (isempty(v) ? "" : toexpr(first(v)))
 @inline function macrotoexpr(v::AbstractVector)
     length(v) > 1 && return toexpr(v)
