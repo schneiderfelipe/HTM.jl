@@ -17,6 +17,7 @@ makedocs(;
         "Home" => "index.md",
         "Usage" => "usage.md",
         "Design" => "design.md",
+        "Comparison to HypertextLiteral.jl" => "htl.md",
         "Benchmarks" => "benchmarks.md",
         "Related packages" => "related.md",
         "Internals" => "autodocs.md",
