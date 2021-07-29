@@ -16,6 +16,7 @@ makedocs(;
     pages=[
         "Home" => "index.md",
         "Usage" => "usage.md",
+        "Advanced" => "advanced.md",
         "Design" => "design.md",
         "Benchmarks" => "benchmarks.md",
         "Related packages" => "related.md",

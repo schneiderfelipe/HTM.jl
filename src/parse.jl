@@ -34,15 +34,17 @@ julia> HTM.parseelems(IOBuffer("pineapple: <div class=\\"fruit\\">🍍</div>..."
 ```
 """
 @inline parseelems(io::IO) = parseelems(io -> true, io)
-@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, Union{String,HTM.Node}[])
+@inline parseelems(predicate, io::IO) = parseelems!(predicate, io, @SVector Union{String,HTM.Node}[])
 @inline function parseelems!(predicate, io::IO, elems::AbstractVector)
     while !eof(io) && predicate(io)
-        skipcomment(io) || pushelem!(elems, parseelem(io))
+        skipcomment(io) || (elems = pushelem!(elems, parseelem(io)))
     end
     return elems
 end
 @inline pushelem!(elems::AbstractVector, elem) = push!(elems, elem)
+@inline pushelem!(elems::StaticVector, elem) = push(elems, elem)
 @inline pushelem!(elems::AbstractVector, elem::AbstractString) = (isempty(elem) || all(isspace, elem)) ? elems : push!(elems, elem)  # TODO: detect all spaces during reading for performance
+@inline pushelem!(elems::StaticVector, elem::AbstractString) = (isempty(elem) || all(isspace, elem)) ? elems : push(elems, elem)  # TODO: detect all spaces during reading for performance
 
 @doc raw"""
     parseelem(io::IO)
@@ -98,7 +100,10 @@ HTM.Node(["div"], [:class => ["fruit"]], Union{String, HTM.Node}["🍍"])
 @inline function parsenode(io::IO)
     skipchars(isequal('<'), io)
     tag = parsetag(io)
-    attrs = parseattrs(io)
+
+    attrs = Pair{Symbol,Vector{String}}[]
+    parseattrs!(io, attrs)
+
     read(io, Char) === '/' && (skipchars(isequal('>'), io); return Node(tag, attrs))
     endtag = *("</", create_tag(tag), '>')
     children = parseelems(io -> !(startswith(io, endtag) || startswith(io, UENDTAG)), io)
@@ -118,9 +123,9 @@ julia> HTM.parsetag(IOBuffer("div class=\\"fruit\\">🍍..."))
 ```
 """
 @inline function parsetag(io::IO)
-    🧩 = String[]
+    🧩 = @SVector String[]
     while !(eof(io) || (🍒 = peek(io, Char)) |> isspace || 🍒 ∈ ">/")
-        push!(🧩, skipstartswith(io, "\\\$") ? "\$" : parseinterp(isspace ⩔ ∈(">/\$\\"), io))
+        🧩 = push(🧩, skipstartswith(io, "\\\$") ? "\$" : parseinterp(isspace ⩔ ∈(">/\$\\"), io))
     end
     return 🧩
 end
@@ -141,14 +146,12 @@ julia> HTM.parseattrs(IOBuffer("class=\\"fruit\\" \$(attrs)>🍍..."))
  Symbol("") => ["\$(attrs)"]
 ```
 """
-@inline parseattrs(io::IO) = parseattrs!(io, Pair{Symbol,Vector{String}}[])
 @inline function parseattrs!(io::IO, attrs::AbstractVector)
     while !eof(io)
         skipchars(isspace, io)
         startswith(io, ('>', '/')) && break
         parseattr!(io, attrs)
     end
-    return attrs
 end
 @inline function parseattr!(io::IO, attrs::AbstractVector)
     startswith(io, '$') && return push!(attrs, Symbol() => [parseinterp(io)])  # spread attributes
@@ -158,7 +161,6 @@ end
         push!(attrs, 🔑 => 🍒 === '=' ? parsevalue(io) : [raw"$(true)"])
         🍒 ∈ ">/" && skip(io, -1)
     end
-    return attrs
 end
 
 @doc raw"""
