@@ -1,3 +1,7 @@
+**WARNING**: this project has been retired.
+For an excellent alternative, see
+[MechanicalRabbit/HypertextLiteral.jl](https://github.com/MechanicalRabbit/HypertextLiteral.jl).
+
 # 🍍 [HTM.jl](https://github.com/schneiderfelipe/HTM.jl) (Hyperscript Tagged Markup in Julia)
 
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://schneiderfelipe.github.io/HTM.jl/dev)
